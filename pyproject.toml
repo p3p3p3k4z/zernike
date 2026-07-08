@@ -1,0 +1,31 @@
+[project]
+name = "zernike-ortogonal"
+version = "0.1.0"
+description = "Ajuste de superficies ópticas con polinomios ortogonales de Zernike (ISO 10110-5)"
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "numpy>=1.24",
+    "matplotlib>=3.7",
+    "pandas>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ipykernel>=6.0",
+    "jupyter>=1.0",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.0",
+    "jupyter>=1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["lib"]
