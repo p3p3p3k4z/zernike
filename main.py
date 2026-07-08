@@ -25,13 +25,20 @@ from lib.matriz import (
     normalizar_vector,
     generar_datos_circulo,
     matriz3d_cuadrante,
+    generar_malla_ccd,
+    centrar_coordenadas,
+    filtrar_pupila,
     imprimir_matriz_n_puntos,
     imprimir_matriz_D,
     imprimir_vectores_V,
     imprimir_matriz_C,
     poli_zenike_print,
 )
-from lib.visualizacion import graficar_flujo_zernike
+from lib.visualizacion import (
+    graficar_flujo_zernike,
+    graficar_distribucion_ccd,
+    graficar_pupila,
+)
 
 
 def seccion_matrices():
@@ -135,32 +142,148 @@ def seccion_animacion(resultados):
     plt.show()
 
 
+def seccion_ccd():
+    """
+    Flujo CCD: genera los 4 cuadrantes con matriz3d_cuadrante,
+    los une, aplica el filtro de pupila circular y lanza el ajuste
+    de Zernike con los puntos que quedan dentro.
+    """
+    print("\n" + "="*60)
+    print("  Flujo CCD: Sensor + Pupila Optica")
+    print("="*60)
+
+    print("\n  Generando los 4 cuadrantes...")
+    X1, Y1, Z1 = matriz3d_cuadrante(1,  5,  1,  10)
+    X2, Y2, Z2 = matriz3d_cuadrante(-5, -1,  1,  10)
+    X3, Y3, Z3 = matriz3d_cuadrante(-5, -1, -10, -1)
+    X4, Y4, Z4 = matriz3d_cuadrante(1,  5, -10, -1)
+
+    X_all = np.concatenate([X1, X2, X3, X4]).astype(float)
+    Y_all = np.concatenate([Y1, Y2, Y3, Y4]).astype(float)
+    Z_all = np.concatenate([Z1, Z2, Z3, Z4]).astype(float)
+
+    print(f"  Total de puntos: {len(X_all)}")
+    print(f"  X en [{X_all.min():.1f}, {X_all.max():.1f}]")
+    print(f"  Y en [{Y_all.min():.1f}, {Y_all.max():.1f}]")
+
+    r_max = np.sqrt(X_all**2 + Y_all**2).max()
+    diametro = float(input(
+        f"\n  Radio maximo de los datos: {r_max:.1f}\n"
+        f"  Ingresa el diametro de la pupila: "
+    ))
+
+    print("\n" + "-"*40)
+    datos_pupila = filtrar_pupila(X_all, Y_all, Z_all, diametro)
+
+    if datos_pupila['mascara'].sum() == 0:
+        print("  ERROR: Ningun punto quedo dentro de la pupila.")
+        print("  Usa un diametro mayor.")
+        return None
+
+    graficar_distribucion_ccd(X_all, Y_all)
+    graficar_pupila(X_all, Y_all, datos_pupila['mascara'], datos_pupila['R'])
+    plt.show(block=False)
+    plt.pause(0.1)
+    return seccion_zernike(
+        datos_pupila['X_norm'],
+        datos_pupila['Y_norm'],
+        datos_pupila['Z_norm'],
+        nombre_flujo="CCD — Puntos dentro de la pupila",
+    )
+
+def seccion_ccd_sensor():
+    """
+    Flujo CCD Sensor: el usuario define el tamano fisico del sensor
+    (N filas x M columnas) y el diametro de la pupila. Se genera una
+    malla regular de N*M puntos que simula los pixeles del detector,
+    se centra al origen optico y se filtra por el circulo de la pupila.
+
+    Diferencia con seccion_ccd():
+      - seccion_ccd()        usa los puntos fijos de los 4 cuadrantes
+      - seccion_ccd_sensor() genera una malla a partir de N, M ingresados
+    """
+    print("\n" + "="*60)
+    print("  Flujo CCD Sensor: Malla generada por parametros")
+    print("="*60)
+
+    print("\n  Ingresa las dimensiones del sensor:")
+    N = int(input("    Numero de filas  (N): "))
+    M = int(input("    Numero de columnas (M): "))
+    diametro = float(input(
+        f"\n  Diametro maximo posible: {min(N, M):.0f} px\n"
+        f"  Ingresa el diametro de la pupila: "
+    ))
+
+    print("\n" + "-"*40)
+    print(f"  Generando malla de {N} x {M} = {N*M} pixeles...")
+    X_pixel, Y_pixel, Z_raw = generar_malla_ccd(N, M)
+    X_c, Y_c = centrar_coordenadas(X_pixel, Y_pixel, N, M)
+    
+    print(f"  Centro optico en (0, 0)")
+    print(f"  X en [{X_c.min():.1f}, {X_c.max():.1f}]")
+    print(f"  Y en [{Y_c.min():.1f}, {Y_c.max():.1f}]")
+
+    print("\n" + "-"*40)
+    datos_pupila = filtrar_pupila(X_c, Y_c, Z_raw, diametro)
+
+    if datos_pupila['mascara'].sum() == 0:
+        print("  ERROR: Ningun punto quedo dentro de la pupila.")
+        print("  Usa un diametro mayor o un sensor mas grande.")
+        return None
+
+    graficar_distribucion_ccd(X_c, Y_c)
+    graficar_pupila(X_c, Y_c, datos_pupila['mascara'], datos_pupila['R'])
+    plt.show(block=False)
+    plt.pause(0.1)
+
+    return seccion_zernike(
+        datos_pupila['X_norm'],
+        datos_pupila['Y_norm'],
+        datos_pupila['Z_norm'],
+        nombre_flujo=f"CCD Sensor {N}x{M} — Pupila d={diametro:.0f}px",
+    )
+
+
 if __name__ == "__main__":
     print("\n" + "#"*60)
     print("  LIBRERIA DE POLINOMIOS ORTOGONALES DE ZERNIKE")
     print("  ISO 10110 |  Grado k=5  |  L=21 polinomios")
     print("#"*60)
 
-    FLUJO = "CIRCULO" 
-#    FLUJO = "CUADRANTE"
-    
+    # Selecciona el flujo:
+    #   "CCD"        -> 4 cuadrantes fijos + filtro de pupila
+    #   "CCD_SENSOR" -> malla N x M generada por parametros + filtro de pupila
+    #   "CIRCULO"    -> circulo unitario aleatorio
+    #   "CUADRANTE"  -> cuadrante I (genera cancelacion catastrofica)
+    FLUJO = "CCD_SENSOR"
+
     if FLUJO == "CUADRANTE":
         X1_n, Y1_n, Z1_n = seccion_matrices()
         resultados, X, Y, W_n = seccion_zernike(X1_n, Y1_n, Z1_n, "Cuadrante I")
-    else:
+        seccion_animacion(resultados)
+
+    elif FLUJO == "CIRCULO":
         print("\n" + "="*60)
-        print("  Generando datos en el Círculo Unitario Completo")
+        print("  Generando datos en el Circulo Unitario Completo")
         print("="*60)
         N = 50
         X_c, Y_c, Z_c = generar_datos_circulo(N, semilla=42)
-        
-        # W (Z) se normaliza. X e Y ya están en [-1, 1] porque el radio rho <= 1
         Z_c_n = normalizar_vector(Z_c)
         imprimir_matriz_n_puntos(X_c, Y_c, Z_c_n, "MATRIZ: CIRCULO UNITARIO")
-        
-        resultados, X, Y, W_n = seccion_zernike(X_c, Y_c, Z_c_n, "Círculo Unitario")
+        resultados, X, Y, W_n = seccion_zernike(X_c, Y_c, Z_c_n, "Circulo Unitario")
+        seccion_animacion(resultados)
 
-    seccion_animacion(resultados)
+    elif FLUJO == "CCD":
+        resultado_ccd = seccion_ccd()
+        if resultado_ccd is not None:
+            resultados, *_ = resultado_ccd
+            seccion_animacion(resultados)
+
+    elif FLUJO == "CCD_SENSOR":
+        resultado_ccd = seccion_ccd_sensor()
+        if resultado_ccd is not None:
+            resultados, *_ = resultado_ccd
+            seccion_animacion(resultados)
 
 """
 ============================================================

@@ -9,6 +9,7 @@ Fuente: poliOrtogonal.ipynb (Cuaderno de Jupyter del proyecto)
 
 import numpy as np
 import pandas as pd
+from typing import Tuple
 
 
 def normalizar_vector(datos):
@@ -216,3 +217,137 @@ def poli_zenike_print(X, Y, polinomios, n_rows=None):
     print(f" EVALUACION DE POLINOMIOS (primeras {n_rows} filas de {N})")
     print("="*80)
     print(df.head(n_rows).to_string(index=False))
+
+
+# ============================================================
+# Funciones de simulación CCD
+# ============================================================
+
+def generar_malla_ccd(
+    N: int, M: int, func_z=None
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Genera una malla cartesiana completa de N x M puntos que representa
+    los pixeles de un sensor CCD. El origen es la esquina superior
+    izquierda (0, 0).
+
+    Parametros
+    ----------
+    N      : int            -- numero de filas del sensor (eje Y)
+    M      : int            -- numero de columnas del sensor (eje X)
+    func_z : callable, opt  -- funcion Z(x, y) para la superficie.
+                              Por defecto usa Z = 3xy + 2x.
+
+    Retorna
+    -------
+    X_pixel, Y_pixel, Z : ndarray (N*M,)
+    """
+    cols = np.arange(M, dtype=float)   # eje X -> columnas
+    filas = np.arange(N, dtype=float)  # eje Y -> filas
+
+    xv, yv = np.meshgrid(cols, filas)
+    X_pixel = xv.flatten()
+    Y_pixel = yv.flatten()
+
+    if func_z is None:
+        Z = 3 * X_pixel * Y_pixel + 2 * X_pixel
+    else:
+        Z = func_z(X_pixel, Y_pixel)
+
+    return X_pixel, Y_pixel, Z
+
+
+def centrar_coordenadas(
+    X_pixel: np.ndarray, Y_pixel: np.ndarray, N: int, M: int
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Traslada las coordenadas de pixel al centro optico del sensor,
+    de modo que el pixel central quede en (0, 0).
+
+    Transformacion:
+        X_c = X_pixel - M / 2
+        Y_c = Y_pixel - N / 2
+
+    Parametros
+    ----------
+    X_pixel, Y_pixel : ndarray (N*M,) -- coordenadas en espacio de pixel
+    N, M             : int             -- dimensiones del sensor
+
+    Retorna
+    -------
+    X_c, Y_c : ndarray (N*M,) -- coordenadas centradas al origen optico
+    """
+    X_c = X_pixel - M / 2.0
+    Y_c = Y_pixel - N / 2.0
+    return X_c, Y_c
+
+
+def filtrar_pupila(
+    X_c: np.ndarray,
+    Y_c: np.ndarray,
+    Z: np.ndarray,
+    diametro: float,
+) -> dict:
+    """
+    Filtra los puntos del sensor CCD segun si caen dentro o fuera
+    del diametro de la pupila optica circular.
+
+    Coordenadas polares:
+        rho   = sqrt(X_c^2 + Y_c^2)          # distancia al centro
+        theta = arctan2(Y_c, X_c)             # angulo (solo informativo)
+
+    Condicion de filtrado:
+        rho <= R_pupila  ->  punto DENTRO de la pupila
+        rho >  R_pupila  ->  punto FUERA  de la pupila
+
+    Los puntos dentro se normalizan al circulo unitario dividiendo
+    entre R_pupila para que sean compatibles con el algoritmo de Zernike.
+
+    Parametros
+    ----------
+    X_c, Y_c : ndarray (K,)  -- coordenadas centradas (pixeles)
+    Z        : ndarray (K,)  -- valores de superficie
+    diametro : float         -- diametro de la pupila en pixeles
+
+    Retorna dict con:
+        rho    : ndarray (K,)     -- distancias al centro (todos los puntos)
+        theta  : ndarray (K,)     -- angulos en radianes  (todos los puntos)
+        mascara: ndarray bool (K,)-- True si esta dentro de la pupila
+        X_norm : ndarray (K_in,)  -- X de puntos dentro, normalizados [-1,1]
+        Y_norm : ndarray (K_in,)  -- Y de puntos dentro, normalizados [-1,1]
+        Z_norm : ndarray (K_in,)  -- Z de puntos dentro, normalizados [-1,1]
+        R      : float            -- radio de la pupila en pixeles
+    """
+    R = diametro / 2.0
+
+    rho   = np.sqrt(X_c**2 + Y_c**2)
+    theta = np.arctan2(Y_c, X_c)
+
+    mascara = rho <= R
+
+    X_dentro = X_c[mascara]
+    Y_dentro = Y_c[mascara]
+    Z_dentro = Z[mascara]
+
+    # Normalizar al circulo unitario dividiendo entre R
+    X_norm = X_dentro / R
+    Y_norm = Y_dentro / R
+    Z_norm = normalizar_vector(Z_dentro)
+
+    n_total  = len(X_c)
+    n_dentro = int(np.sum(mascara))
+    n_fuera  = n_total - n_dentro
+
+    print(f"\n  Total de pixeles : {n_total}")
+    print(f"  Dentro de pupila : {n_dentro}  ({100*n_dentro/n_total:.1f}%)")
+    print(f"  Fuera de pupila  : {n_fuera}   ({100*n_fuera/n_total:.1f}%)")
+
+    return {
+        'rho':    rho,
+        'theta':  theta,
+        'mascara': mascara,
+        'X_norm': X_norm,
+        'Y_norm': Y_norm,
+        'Z_norm': Z_norm,
+        'R':      R,
+    }

@@ -140,12 +140,11 @@ def graficar_flujo_zernike(resultados, intervalo_ms=180, repetir=True):
                 
                 distancia = x_destino - x_origen
                 if distancia == 0:
-                    # Dependencia en el mismo polinomio (ej. D_r depende de U_r) -> loop local
                     curvatura = 0.5
                 else:
                     curvatura = 0.1 + abs(distancia) * 0.05
                     if distancia > 0:
-                        curvatura = -curvatura # Salto hacia adelante (ej. A depende de i>r)
+                        curvatura = -curvatura
                 
                 flecha = ax.annotate(
                     '',
@@ -176,3 +175,82 @@ def graficar_flujo_zernike(resultados, intervalo_ms=180, repetir=True):
 
     plt.tight_layout()
     return fig, anim
+
+
+def graficar_distribucion_ccd(
+    X_c: np.ndarray,
+    Y_c: np.ndarray,
+) -> plt.Figure:
+    """
+    Plano cartesiano simple con todos los puntos de los 4 cuadrantes
+    antes de aplicar el filtro de la pupila.
+
+    Parametros
+    ----------
+    X_c, Y_c : ndarray -- coordenadas de todos los puntos
+    """
+    fig, ax = plt.subplots(figsize=(6, 6))
+
+    ax.scatter(X_c, Y_c, c=_COL['B'], s=14, alpha=0.75, linewidths=0)
+
+    ax.axhline(0, color='#AAAAAA', linewidth=0.8, linestyle='--')
+    ax.axvline(0, color='#AAAAAA', linewidth=0.8, linestyle='--')
+
+    ax.set_title('Distribucion de puntos — 4 Cuadrantes', fontsize=12)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_aspect('equal')
+    ax.grid(True, alpha=0.25)
+
+    plt.tight_layout()
+    return fig
+
+
+def graficar_pupila(
+    X_c: np.ndarray,
+    Y_c: np.ndarray,
+    mascara: np.ndarray,
+    R: float,
+) -> plt.Figure:
+    """
+    Plano cartesiano con puntos coloreados segun si caen dentro (verde)
+    o fuera (rojo) de la pupila, con el circulo de la pupila dibujado.
+
+    Parametros
+    ----------
+    X_c, Y_c : ndarray      -- coordenadas de todos los puntos
+    mascara  : ndarray bool -- True si el punto esta dentro de la pupila
+    R        : float        -- radio de la pupila
+    """
+    fig, ax = plt.subplots(figsize=(6, 6))
+
+    ax.scatter(
+        X_c[~mascara], Y_c[~mascara],
+        c=_COL['U'], s=14, alpha=0.55, linewidths=0,
+        label=f'Fuera  ({(~mascara).sum()})',
+    )
+    ax.scatter(
+        X_c[mascara], Y_c[mascara],
+        c=_COL['V'], s=14, alpha=0.85, linewidths=0,
+        label=f'Dentro ({mascara.sum()})',
+    )
+
+    circulo = plt.Circle(
+        (0, 0), R,
+        color=_COL['D'], fill=False, linewidth=2.0,
+        label=f'Pupila  R={R:.1f}',
+    )
+    ax.add_patch(circulo)
+
+    ax.axhline(0, color='#AAAAAA', linewidth=0.8, linestyle='--')
+    ax.axvline(0, color='#AAAAAA', linewidth=0.8, linestyle='--')
+
+    ax.set_title(f'Filtrado por pupila  (R = {R:.1f})', fontsize=12)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.legend(fontsize=9, frameon=True)
+    ax.set_aspect('equal')
+    ax.grid(True, alpha=0.25)
+
+    plt.tight_layout()
+    return fig

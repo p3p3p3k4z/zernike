@@ -1,10 +1,10 @@
 """
-lib/ — Librería de Polinomios Ortogonales de Zernike (ISO 10110-5)
+lib/ — Libreria de Polinomios Ortogonales de Zernike (ISO 10110-5)
 
-Módulos:
-  zernike       → Motor matemático: evaluación, Gram-Schmidt, coeficientes A
-  matriz        → Generación e impresión de matrices de datos
-  visualizacion → Animación del flujo recursivo con matplotlib
+Modulos:
+  zernike       → Motor matematico: evaluacion, Gram-Schmidt, coeficientes, polinomios
+  matriz        → Generacion e impresion de matrices de datos
+  visualizacion → Animacion del flujo recursivo con matplotlib
 """
 
 from .zernike import (
