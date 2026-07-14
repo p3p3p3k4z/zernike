@@ -49,10 +49,10 @@ def normalizar_por_radio(X, Y):
     return X / R_max, Y / R_max
 
 
-def generar_datos_circulo(N=50, semilla=42):
+def generar_datos_circulo(N=50, semilla=42, func_z=None):
     """
     Genera N puntos aleatorios dentro del circulo unitario con
-    densidad uniforme en area, y calcula Z = 3xy + 2x.
+    densidad uniforme en area, y calcula Z.
 
     Por que sqrt(random)?
     La distribucion radial uniforme en area requiere rho ~ sqrt(U)
@@ -63,6 +63,7 @@ def generar_datos_circulo(N=50, semilla=42):
     ----------
     N      : int  -- numero de puntos (defecto 50)
     semilla: int  -- semilla para reproducibilidad
+    func_z : callable, opt -- funcion personalizada para calcular Z(X, Y)
 
     Retorna
     -------
@@ -73,14 +74,17 @@ def generar_datos_circulo(N=50, semilla=42):
     theta = 2 * np.pi * np.random.rand(N)
     X = rho * np.cos(theta)
     Y = rho * np.sin(theta)
-    Z = 3 * X * Y + 2 * X
+    if func_z is None:
+        Z = 3 * X * Y + 2 * X
+    else:
+        Z = func_z(X, Y)
     return X, Y, Z
 
 
-def matriz3d_cuadrante(x_start, x_end, y_start, y_end, n_x=5, n_y=10):
+def matriz3d_cuadrante(x_start, x_end, y_start, y_end, n_x=5, n_y=10, func_z=None):
     """
     Genera una malla cartesiana de puntos en el cuadrante definido
-    por [x_start, x_end] x [y_start, y_end] y calcula Z = 3xy + 2x.
+    por [x_start, x_end] x [y_start, y_end] y calcula Z.
 
     Proceso interno:
       1. linspace -> vectores de ejes
@@ -93,6 +97,7 @@ def matriz3d_cuadrante(x_start, x_end, y_start, y_end, n_x=5, n_y=10):
     x_start, x_end : float -- limites del eje X
     y_start, y_end : float -- limites del eje Y
     n_x, n_y       : int   -- numero de puntos por eje
+    func_z         : callable, opt -- funcion personalizada para calcular Z(X, Y)
 
     Retorna
     -------
@@ -104,7 +109,10 @@ def matriz3d_cuadrante(x_start, x_end, y_start, y_end, n_x=5, n_y=10):
     xv, yv   = np.meshgrid(x_vals, y_vals)
     x_flat   = xv.flatten()
     y_flat   = yv.flatten()
-    z_flat   = (3 * x_flat * y_flat + 2 * x_flat).astype(int)
+    if func_z is None:
+        z_flat   = (3 * x_flat * y_flat + 2 * x_flat).astype(int)
+    else:
+        z_flat   = func_z(x_flat, y_flat)
 
     return x_flat, y_flat, z_flat
 
@@ -351,3 +359,44 @@ def filtrar_pupila(
         'Z_norm': Z_norm,
         'R':      R,
     }
+
+
+def parsear_ecuacion_z(expr_str: str):
+    """
+    Convierte una cadena de texto que contiene una formula matematica en x, y
+    en una funcion ejecutable (callable) de Python.
+    Permite el uso de numpy (como np.sin, np.cos, np.sqrt, np.exp, etc.).
+    """
+    expr_str = expr_str.strip()
+    if not expr_str:
+        return None
+
+    # Entorno seguro de evaluacion con funciones matematicas usuales de numpy
+    safe_dict = {
+        'x': None,
+        'y': None,
+        'np': np,
+        'sin': np.sin,
+        'cos': np.cos,
+        'tan': np.tan,
+        'sqrt': np.sqrt,
+        'exp': np.exp,
+        'log': np.log,
+        'pi': np.pi,
+        'abs': np.abs,
+    }
+
+    # Permitir la notacion '^' reemplazandola por '**'
+    expr_eval = expr_str.replace('^', '**')
+
+    # Retorna una funcion ejecutable
+    def func(x, y):
+        context = safe_dict.copy()
+        context['x'] = x
+        context['y'] = y
+        try:
+            return eval(expr_eval, {"__builtins__": None}, context)
+        except Exception as e:
+            raise ValueError(f"Error al evaluar la ecuacion '{expr_str}': {e}")
+
+    return func

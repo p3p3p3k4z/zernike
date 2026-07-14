@@ -28,6 +28,7 @@ from lib.matriz import (
     generar_malla_ccd,
     centrar_coordenadas,
     filtrar_pupila,
+    parsear_ecuacion_z,
     imprimir_matriz_n_puntos,
     imprimir_matriz_D,
     imprimir_vectores_V,
@@ -41,20 +42,19 @@ from lib.visualizacion import (
 )
 
 
-def seccion_matrices():
+def seccion_matrices(func_z=None):
     print("\n" + "="*60)
     print("  Matrices de datos por cuadrante")
-    print("  Superficie de prueba: Z = 3xy + 2x")
     print("="*60)
 
     # Cuadrante I  (x+, y+)
-    X1, Y1, Z1 = matriz3d_cuadrante(1, 5, 1, 10)
+    X1, Y1, Z1 = matriz3d_cuadrante(1, 5, 1, 10, func_z=func_z)
     # Cuadrante II (x-, y+)
-    X2, Y2, Z2 = matriz3d_cuadrante(-5, -1, 1, 10)
+    X2, Y2, Z2 = matriz3d_cuadrante(-5, -1, 1, 10, func_z=func_z)
     # Cuadrante III (x-, y-)
-    X3, Y3, Z3 = matriz3d_cuadrante(-5, -1, -10, -1)
+    X3, Y3, Z3 = matriz3d_cuadrante(-5, -1, -10, -1, func_z=func_z)
     # Cuadrante IV (x+, y-)
-    X4, Y4, Z4 = matriz3d_cuadrante(1, 5, -10, -1)
+    X4, Y4, Z4 = matriz3d_cuadrante(1, 5, -10, -1, func_z=func_z)
 
     imprimir_matriz_n_puntos(X1, Y1, Z1, "MATRIZ 1: CUADRANTE I")
     #imprimir_matriz_n_puntos(X2, Y2, Z2, "MATRIZ 2: CUADRANTE II")
@@ -142,7 +142,7 @@ def seccion_animacion(resultados):
     plt.show()
 
 
-def seccion_ccd():
+def seccion_ccd(func_z=None):
     """
     Flujo CCD: genera los 4 cuadrantes con matriz3d_cuadrante,
     los une, aplica el filtro de pupila circular y lanza el ajuste
@@ -153,10 +153,10 @@ def seccion_ccd():
     print("="*60)
 
     print("\n  Generando los 4 cuadrantes...")
-    X1, Y1, Z1 = matriz3d_cuadrante(1,  5,  1,  10)
-    X2, Y2, Z2 = matriz3d_cuadrante(-5, -1,  1,  10)
-    X3, Y3, Z3 = matriz3d_cuadrante(-5, -1, -10, -1)
-    X4, Y4, Z4 = matriz3d_cuadrante(1,  5, -10, -1)
+    X1, Y1, Z1 = matriz3d_cuadrante(1,  5,  1,  10, func_z=func_z)
+    X2, Y2, Z2 = matriz3d_cuadrante(-5, -1,  1,  10, func_z=func_z)
+    X3, Y3, Z3 = matriz3d_cuadrante(-5, -1, -10, -1, func_z=func_z)
+    X4, Y4, Z4 = matriz3d_cuadrante(1,  5, -10, -1, func_z=func_z)
 
     X_all = np.concatenate([X1, X2, X3, X4]).astype(float)
     Y_all = np.concatenate([Y1, Y2, Y3, Y4]).astype(float)
@@ -206,6 +206,23 @@ def seccion_ccd_sensor():
     print("  Flujo CCD Sensor: Malla generada por parametros")
     print("="*60)
 
+    # --- Configuracion de la ecuacion para Z ---
+    print("\n--- Configuracion de la Superficie Z ---")
+    print("  Ingresa la ecuacion para Z en terminos de x e y (ej: 2*x*y, x**2 + y**2, 3*x*y + 2*x)")
+    print("  Presiona ENTER para usar la ecuacion por defecto (Z = 3*x*y + 2*x)")
+    ecuacion_input = input("  Z = ").strip()
+
+    func_z = None
+    if ecuacion_input:
+        try:
+            func_z = parsear_ecuacion_z(ecuacion_input)
+            print("  Ecuacion Z cargada correctamente.")
+        except Exception as e:
+            print(f"  Error al procesar la ecuacion: {e}")
+            print("  Se utilizara la ecuacion por defecto (Z = 3*x*y + 2*x)")
+            func_z = None
+
+    # --- Entrada del usuario ---
     print("\n  Ingresa las dimensiones del sensor:")
     N = int(input("    Numero de filas  (N): "))
     M = int(input("    Numero de columnas (M): "))
@@ -216,7 +233,7 @@ def seccion_ccd_sensor():
 
     print("\n" + "-"*40)
     print(f"  Generando malla de {N} x {M} = {N*M} pixeles...")
-    X_pixel, Y_pixel, Z_raw = generar_malla_ccd(N, M)
+    X_pixel, Y_pixel, Z_raw = generar_malla_ccd(N, M, func_z=func_z)
     X_c, Y_c = centrar_coordenadas(X_pixel, Y_pixel, N, M)
     
     print(f"  Centro optico en (0, 0)")

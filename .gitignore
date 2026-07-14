@@ -2,6 +2,7 @@ referencias/
 img/
 .venv/
 .pycache/
-lib/__pycache__/
+lib/__pycache__
 __pycache__/
 *.pyc
+test/

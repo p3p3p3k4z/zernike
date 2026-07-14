@@ -17,11 +17,14 @@ Miniprograma para el ajuste de superficies ópticas mediante **polinomios ortogo
 # Clonar / entrar al directorio del proyecto
 cd zernike
 
-# Crear entorno virtual e instalar dependencias
+# Crear entorno virtual e instalar dependencias principales
 uv sync
 
 # (opcional) instalar con dependencias de desarrollo: Jupyter, ipykernel
 uv sync --extra dev
+
+# (opcional) instalar dependencias experimentales para el modelo SR-GAN
+uv sync --extra srgan
 ```
 
 El entorno virtual se crea automáticamente en `.venv/`.
@@ -151,6 +154,36 @@ La ventana incluye además un **diagrama de pipeline** (inferior) que resalta la
 uv sync --extra dev
 uv run jupyter notebook poliOrtogonal.ipynb
 ```
+
+---
+
+## Módulo Experimental de Superresolución (SR-GAN)
+
+Hemos incorporado un entorno experimental para aumentar la resolución de interferogramas de $32\times32$ a $128\times128$ píxeles, empleando una red neuronal generativa (SR-GAN), seguido de una reconstrucción matemática idealizada con Zernike.
+
+**1. Preprocesamiento Inteligente (Bounding Box)**  
+Antes de alimentar la red, el sistema incluye un algoritmo de **Auto-Recorte Inteligente**. Este detecta la pupila circular ignorando el ruido oscuro del sensor y ajusta un cuadrado perfecto (Bounding Box) alrededor del interferograma para evitar deformaciones elípticas.
+Puedes probar cómo recorta tus fotos sin necesidad de correr la red neuronal:
+```bash
+uv run python test/inference.py test/Interferogramas/Imagen10.jpg --preprocess-only
+```
+Esto guardará la imagen centrada y recortada en `test/resultados_sr/`.
+
+**2. Entrenar el modelo (Generación de pesos)**  
+Para poder realizar la inferencia completa, primero necesitas generar los pesos de la red. Ejecuta:
+```bash
+uv run python test/train_srgan.py --epochs 100
+```
+Esto creará los archivos de pesos (`generator_epoch_100.pth` y `discriminator_epoch_100.pth`) dentro de la carpeta `test`.
+
+**3. Inferencia Completa y Reconstrucción Zernike**  
+Pasa una imagen para ejecutar todo el flujo: recortará, hará superresolución con SR-GAN (128x128), y finalmente extraerá el modelo idealizado libre de ruido (`W_fit`) con los polinomios de Zernike.
+
+```bash
+uv run python test/inference.py test/Interferogramas/Imagen10.jpg
+```
+*Si tu archivo de pesos está en otra ubicación, usa `--weights /ruta/al/archivo.pth`.*
+Se abrirá una gráfica comparativa y se guardarán 4 variantes de resultados en `test/resultados_sr/`.
 
 ---
 
