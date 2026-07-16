@@ -147,6 +147,23 @@ La animación revela cada etapa **barra a barra**, con un color distintivo por v
 La ventana incluye además un **diagrama de pipeline** (inferior) que resalta la etapa activa, y un **scatter** de la superficie ajustada W_fit sobre el círculo unitario.
 
 ---
+### Zernike en C
+Rescritura del programa en **C** para garantizar el máximo rendimiento, gestionando memoria explícitamente y evitando dependencias de Python para equipos con menos recursos.
+
+### Requisitos para C
+- Compilador `gcc` y herramientas de construcción (`make`).
+- Librería de desarrollo de ncurses (ej. `libncurses5-dev` en Ubuntu/Debian).
+
+### Compilar y Ejecutar
+
+```bash
+cd c_impl
+make clean
+make
+./bin/zernike_app
+```
+
+---
 
 ## Ejecutar el Jupyter Notebook
 

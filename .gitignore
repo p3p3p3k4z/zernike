@@ -6,3 +6,9 @@ lib/__pycache__
 __pycache__/
 *.pyc
 test/
+
+# Archivos compilados C y binarios inter-proceso
+c_impl/obj/
+c_impl/bin/
+*.bin
+zernike_temp.bin
