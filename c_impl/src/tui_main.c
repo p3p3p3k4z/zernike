@@ -15,7 +15,7 @@
 #define COLOR_POINT 8
 #define COLOR_EXCLUDED 9
 
-// draw_points_mode removed
+/* draw_points_mode removed */
 
 void draw_pupil_mode(size_t N, double* X, double* Y, int* mascara, double radio) {
     int max_y, max_x;
@@ -36,9 +36,10 @@ void draw_pupil_mode(size_t N, double* X, double* Y, int* mascara, double radio)
     }
     if (max_r == 0) max_r = 1;
 
-    // Circulo pupila (Color D = amarillo/naranja equivalente a matplot)
+    /* Circulo pupila (Color D = amarillo/naranja equivalente a matplot) */
     wattron(win, COLOR_PAIR(COLOR_D));
-    for (int theta = 0; theta < 360; theta += 2) {
+    int theta;
+    for (theta = 0; theta < 360; theta += 2) {
         double rad_ang = theta * 3.14159 / 180.0;
         int px = center_x + (int)((radio/max_r) * radius_x * cos(rad_ang));
         int py = center_y - (int)((radio/max_r) * radius_y * sin(rad_ang));
@@ -51,18 +52,19 @@ void draw_pupil_mode(size_t N, double* X, double* Y, int* mascara, double radio)
     wattroff(win, COLOR_PAIR(COLOR_D));
     napms(200);
 
-    // Puntos (Rojo excluido, Verde incluido)
-    for (size_t i = 0; i < N; i++) {
+    /* Puntos (Rojo excluido, Verde incluido) */
+    size_t i;
+    for (i = 0; i < N; i++) {
         int px = center_x + (int)((X[i]/max_r) * radius_x);
         int py = center_y - (int)((Y[i]/max_r) * radius_y);
         
         if (px > 0 && px < max_x - 1 && py > 0 && py < max_y - 1) {
             if (mascara[i]) {
-                wattron(win, COLOR_PAIR(COLOR_V) | A_BOLD); // Verde
+                wattron(win, COLOR_PAIR(COLOR_V) | A_BOLD); /* Verde */
                 mvwaddch(win, py, px, 'O');
                 wattroff(win, COLOR_PAIR(COLOR_V) | A_BOLD);
             } else {
-                wattron(win, COLOR_PAIR(COLOR_U)); // Rojo
+                wattron(win, COLOR_PAIR(COLOR_U)); /* Rojo */
                 mvwaddch(win, py, px, 'x');
                 wattroff(win, COLOR_PAIR(COLOR_U));
             }
@@ -83,6 +85,7 @@ void draw_pupil_mode(size_t N, double* X, double* Y, int* mascara, double radio)
 void draw_algo_mode(size_t L, double* A) {
     int max_y, max_x;
     getmaxyx(stdscr, max_y, max_x);
+    (void)max_y;
     WINDOW *win_title = newwin(3, max_x, 0, 0);
     WINDOW *win_log = newwin(8, max_x, 3, 0);
     WINDOW *win_bars = newwin((int)L + 2, max_x, 11, 0);
@@ -94,9 +97,9 @@ void draw_algo_mode(size_t L, double* A) {
     box(win_log, 0, 0);
     box(win_bars, 0, 0);
     
-    int delay = 200; // 200ms por iteracion (similar a 180ms python)
+    int delay = 200; /* 200ms por iteracion (similar a 180ms python) */
     
-    // Preparar nombres Z
+    /* Preparar nombres Z */
     for (size_t r = 0; r < L; r++) {
         mvwprintw(win_bars, (int)r + 1, 2, "Z%02zu |", r + 1);
     }

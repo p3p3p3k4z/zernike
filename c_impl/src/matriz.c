@@ -96,15 +96,24 @@ void vector_print(const Vector* v, const char* name, int max_items) {
 }
 
 void matrix_print(const Matrix* m, const char* name) {
+    matrix_print_limit(m, name, m->cols); /* Por defecto imprime todo */
+}
+
+void matrix_print_limit(const Matrix* m, const char* name, int max_cols) {
     printf("\n--- Matriz: %s ---\n", name);
+    size_t limit = (max_cols > 0 && (size_t)max_cols < m->cols) ? (size_t)max_cols : m->cols;
+    
     for (size_t i = 0; i < m->rows; i++) {
         printf("r%02zu | ", i);
-        for (size_t j = 0; j < m->cols; j++) {
+        for (size_t j = 0; j < limit; j++) {
             if (fabs(m->data[i][j]) > 1e-10) {
                 printf("%9.4f ", m->data[i][j]);
             } else {
                 printf("   .      ");
             }
+        }
+        if (limit < m->cols) {
+            printf(" ... (+ %zu cols)", m->cols - limit);
         }
         printf("\n");
     }

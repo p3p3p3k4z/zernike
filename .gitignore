@@ -12,3 +12,9 @@ c_impl/obj/
 c_impl/bin/
 *.bin
 zernike_temp.bin
+
+dist/
+build/
+*.spec
+output/
+*txt

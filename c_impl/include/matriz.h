@@ -26,5 +26,6 @@ double vector_max_abs(const Vector* v);
 void vector_normalize_inplace(Vector* v);
 void vector_print(const Vector* v, const char* name, int max_items);
 void matrix_print(const Matrix* m, const char* name);
+void matrix_print_limit(const Matrix* m, const char* name, int max_cols);
 
 #endif /* MATRIZ_H */

@@ -14,6 +14,7 @@ Estructura:
 
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 
 from lib.zernike import (
     polinomios_zernike,
@@ -34,7 +35,14 @@ from lib.matriz import (
     imprimir_vectores_V,
     imprimir_matriz_C,
     poli_zenike_print,
+    imprimir_vector_F,
+    imprimir_vector_B,
 )
+from lib.io import exportar_resultados_csv, cargar_datos_csv, inicializar_logger
+
+# Configurar el logger funcional (sin clases/POO) para capturar print()
+inicializar_logger("python_output.txt")
+
 from lib.visualizacion import (
     graficar_flujo_zernike,
     graficar_distribucion_ccd,
@@ -114,7 +122,9 @@ def seccion_zernike(X_n, Y_n, W_n, nombre_flujo="Cuadrante I"):
     poli_zenike_print(X_n, Y_n, polinomios, n_rows=N)
 
     imprimir_matriz_D(resultados['D'])
+    imprimir_vector_F(resultados['F'])
     imprimir_vectores_V(resultados['V'], n_puntos=N)
+    imprimir_vector_B(resultados['B'])
     imprimir_matriz_C(resultados['C'])
 
     verificar_ortogonalidad(resultados['V'])
@@ -129,6 +139,9 @@ def seccion_zernike(X_n, Y_n, W_n, nombre_flujo="Cuadrante I"):
     error = W_n - resultados['W_fit']
     rms = np.sqrt(np.mean(error**2))
     print(f"\nError RMS del ajuste: {rms:.2e}")
+
+    # ---- Exportar a CSV ----
+    exportar_resultados_csv(X_n, Y_n, W_n, resultados['W_fit'], error)
 
     return resultados, X_n, Y_n, W_n
 
@@ -248,6 +261,10 @@ def seccion_ccd_sensor():
         print("  Usa un diametro mayor o un sensor mas grande.")
         return None
 
+    if func_z is not None:
+        # Re-evaluamos Z en coordenadas normalizadas para obtener coeficientes puros (ej: A_6 = 1.0)
+        datos_pupila['Z_norm'] = func_z(datos_pupila['X_norm'], datos_pupila['Y_norm'])
+
     graficar_distribucion_ccd(X_c, Y_c)
     graficar_pupila(X_c, Y_c, datos_pupila['mascara'], datos_pupila['R'])
     plt.show(block=False)
@@ -261,20 +278,79 @@ def seccion_ccd_sensor():
     )
 
 
+def seccion_importar_csv():
+    print("\n" + "="*60)
+    print("  Flujo CSV: Cargar datos desde archivo")
+    print("="*60)
+    filepath = input("\n  Ingresa la ruta del archivo CSV (ej: datos.csv): ").strip()
+    
+    X, Y, Z = cargar_datos_csv(filepath)
+    if X is None:
+        return None
+        
+    print(f"\n  Datos cargados: {len(X)} puntos.")
+    print(f"  X en [{X.min():.1f}, {X.max():.1f}]")
+    print(f"  Y en [{Y.min():.1f}, {Y.max():.1f}]")
+    
+    diametro_max = 2 * np.sqrt(X**2 + Y**2).max()
+    diametro = float(input(
+        f"\n  Diametro sugerido (max diametro de datos): {diametro_max:.1f}\n"
+        f"  Ingresa el diametro de la pupila optica: "
+    ))
+    
+    print("\n" + "-"*40)
+    datos_pupila = filtrar_pupila(X, Y, Z, diametro)
+    
+    if datos_pupila['mascara'].sum() == 0:
+        print("  ERROR: Ningun punto quedo dentro de la pupila.")
+        return None
+        
+    graficar_distribucion_ccd(X, Y)
+    graficar_pupila(X, Y, datos_pupila['mascara'], datos_pupila['R'])
+    plt.show(block=False)
+    plt.pause(0.1)
+
+    return seccion_zernike(
+        datos_pupila['X_norm'],
+        datos_pupila['Y_norm'],
+        datos_pupila['Z_norm'],
+        nombre_flujo=f"CSV '{filepath}' — Pupila d={diametro:.0f}px",
+    )
+
+
 if __name__ == "__main__":
     print("\n" + "#"*60)
     print("  LIBRERIA DE POLINOMIOS ORTOGONALES DE ZERNIKE")
     print("  ISO 10110 |  Grado k=5  |  L=21 polinomios")
     print("#"*60)
 
-    # Selecciona el flujo:
-    #   "CCD"        -> 4 cuadrantes fijos + filtro de pupila
-    #   "CCD_SENSOR" -> malla N x M generada por parametros + filtro de pupila
-    #   "CIRCULO"    -> circulo unitario aleatorio
-    #   "CUADRANTE"  -> cuadrante I (genera cancelacion catastrofica)
-    FLUJO = "CCD_SENSOR"
+    print("\nSelecciona el flujo a ejecutar:")
+    print("  1) CCD_SENSOR -> Malla NxM simulada con funcion Z (Recomendado)")
+    print("  2) CSV        -> Importar datos experimentales (X, Y, Z)")
+    print("  3) CIRCULO    -> Circulo unitario aleatorio")
+    print("  4) CCD        -> 4 cuadrantes fijos + filtro (Legacy)")
+    print("  5) CUADRANTE  -> Cuadrante I (Demostracion de error)")
+    
+    opcion = input("\nIngresa una opcion [1]: ").strip()
+    
+    if opcion == "2":
+        FLUJO = "CSV"
+    elif opcion == "3":
+        FLUJO = "CIRCULO"
+    elif opcion == "4":
+        FLUJO = "CCD"
+    elif opcion == "5":
+        FLUJO = "CUADRANTE"
+    else:
+        FLUJO = "CCD_SENSOR"
 
-    if FLUJO == "CUADRANTE":
+    if FLUJO == "CSV":
+        resultado_csv = seccion_importar_csv()
+        if resultado_csv is not None:
+            resultados, *_ = resultado_csv
+            seccion_animacion(resultados)
+
+    elif FLUJO == "CUADRANTE":
         X1_n, Y1_n, Z1_n = seccion_matrices()
         resultados, X, Y, W_n = seccion_zernike(X1_n, Y1_n, Z1_n, "Cuadrante I")
         seccion_animacion(resultados)

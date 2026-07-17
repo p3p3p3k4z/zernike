@@ -1,4 +1,5 @@
 #include "data_gen.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -12,18 +13,22 @@ SurfaceEq parse_eq(const char* str) {
     if (strstr(str, "3*x*y + 2*x") != NULL) { eq.c = 3; eq.d = 2; }
     else if (strstr(str, "2*x*y") != NULL) { eq.c = 2; }
     else if (strstr(str, "x**2 + y**2") != NULL) { eq.a = 1; eq.b = 1; }
-    else { eq.c = 3; eq.d = 2; } // Default
+    else if (strstr(str, "y**2 - x**2") != NULL) { eq.b = 1; eq.a = -1; }
+    else { eq.c = 3; eq.d = 2; } /* Default */
     return eq;
 }
 
-static double eval_z(double x, double y, SurfaceEq eq) {
+double eval_z(double x, double y, SurfaceEq eq) {
     return eq.a*x*x + eq.b*y*y + eq.c*x*y + eq.d*x + eq.e*y + eq.f;
 }
 
 void generar_circulo(int N, Vector** oX, Vector** oY, Vector** oZ) {
-    Vector* X = vector_create(N);
-    Vector* Y = vector_create(N);
-    Vector* Z = vector_create(N);
+    Vector* X;
+    Vector* Y;
+    Vector* Z;
+    X = vector_create(N);
+    Y = vector_create(N);
+    Z = vector_create(N);
     for (int i=0; i<N; i++) {
         double r1 = (double)rand() / RAND_MAX;
         double r2 = (double)rand() / RAND_MAX;
@@ -36,18 +41,21 @@ void generar_circulo(int N, Vector** oX, Vector** oY, Vector** oZ) {
     *oX = X; *oY = Y; *oZ = Z;
 }
 
-static void append_malla(double x0, double x1, double y0, double y1, SurfaceEq eq, Vector** oX, Vector** oY, Vector** oZ) {
-    int nx = (int)(x1 - x0);
-    int ny = (int)(y1 - y0);
+static void append_malla(int nx, int ny, double x0, double x1, double y0, double y1, SurfaceEq eq, Vector** oX, Vector** oY, Vector** oZ) {
     int size = nx * ny;
     Vector* X = vector_create(size);
     Vector* Y = vector_create(size);
     Vector* Z = vector_create(size);
+    
+    double dx = (nx > 1) ? (x1 - x0) / (nx - 1) : 0.0;
+    double dy = (ny > 1) ? (y1 - y0) / (ny - 1) : 0.0;
+    
     int idx = 0;
-    for(int i=0; i<nx; i++) {
-        for(int j=0; j<ny; j++) {
-            X->data[idx] = x0 + i;
-            Y->data[idx] = y0 + j;
+    int i, j;
+    for(i=0; i<nx; i++) {
+        for(j=0; j<ny; j++) {
+            X->data[idx] = x0 + i * dx;
+            Y->data[idx] = y0 + j * dy;
             Z->data[idx] = eval_z(X->data[idx], Y->data[idx], eq);
             idx++;
         }
@@ -57,16 +65,16 @@ static void append_malla(double x0, double x1, double y0, double y1, SurfaceEq e
 
 void generar_cuadrante(Vector** oX, Vector** oY, Vector** oZ) {
     SurfaceEq eq = {0,0,3,2,0,0};
-    append_malla(1, 5, 1, 10, eq, oX, oY, oZ);
+    append_malla(4, 9, 1, 5, 1, 10, eq, oX, oY, oZ);
 }
 
 void generar_ccd_raw(Vector** oX, Vector** oY, Vector** oZ) {
     SurfaceEq eq = {0,0,3,2,0,0};
     Vector *x1,*y1,*z1, *x2,*y2,*z2, *x3,*y3,*z3, *x4,*y4,*z4;
-    append_malla(1, 5, 1, 10, eq, &x1, &y1, &z1);
-    append_malla(-5, -1, 1, 10, eq, &x2, &y2, &z2);
-    append_malla(-5, -1, -10, -1, eq, &x3, &y3, &z3);
-    append_malla(1, 5, -10, -1, eq, &x4, &y4, &z4);
+    append_malla(4, 9, 1, 5, 1, 10, eq, &x1, &y1, &z1);
+    append_malla(4, 9, -5, -1, 1, 10, eq, &x2, &y2, &z2);
+    append_malla(4, 9, -5, -1, -10, -1, eq, &x3, &y3, &z3);
+    append_malla(4, 9, 1, 5, -10, -1, eq, &x4, &y4, &z4);
     
     int total = x1->length + x2->length + x3->length + x4->length;
     Vector* X = vector_create(total);
@@ -135,4 +143,60 @@ void aplicar_filtro_pupila(Vector* X_raw, Vector* Y_raw, Vector* Z_raw, double d
     
     *mascara_out = mascara;
     *X_f = fx; *Y_f = fy; *Z_f = fz;
+}
+
+int cargar_csv_xyz(const char* filepath, Vector** out_X, Vector** out_Y, Vector** out_Z) {
+    FILE* fp = fopen(filepath, "r");
+    if (!fp) return 0;
+    
+    char line[512];
+    if (!fgets(line, sizeof(line), fp)) {
+        fclose(fp);
+        return 0; // Archivo vacio
+    }
+    
+    size_t capacity = 1000;
+    size_t count = 0;
+    double* x_data = malloc(capacity * sizeof(double));
+    double* y_data = malloc(capacity * sizeof(double));
+    double* z_data = malloc(capacity * sizeof(double));
+    
+    while (fgets(line, sizeof(line), fp)) {
+        double x, y, z;
+        if (sscanf(line, "%lf,%lf,%lf", &x, &y, &z) == 3) {
+            if (count >= capacity) {
+                capacity *= 2;
+                x_data = realloc(x_data, capacity * sizeof(double));
+                y_data = realloc(y_data, capacity * sizeof(double));
+                z_data = realloc(z_data, capacity * sizeof(double));
+            }
+            x_data[count] = x;
+            y_data[count] = y;
+            z_data[count] = z;
+            count++;
+        }
+    }
+    fclose(fp);
+    
+    if (count == 0) {
+        free(x_data); free(y_data); free(z_data);
+        return 0;
+    }
+    
+    Vector* vX = vector_create(count);
+    Vector* vY = vector_create(count);
+    Vector* vZ = vector_create(count);
+    
+    for (size_t i = 0; i < count; i++) {
+        vX->data[i] = x_data[i];
+        vY->data[i] = y_data[i];
+        vZ->data[i] = z_data[i];
+    }
+    
+    free(x_data); free(y_data); free(z_data);
+    
+    *out_X = vX;
+    *out_Y = vY;
+    *out_Z = vZ;
+    return 1;
 }

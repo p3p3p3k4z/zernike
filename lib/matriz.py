@@ -226,6 +226,19 @@ def poli_zenike_print(X, Y, polinomios, n_rows=None):
     print("="*80)
     print(df.head(n_rows).to_string(index=False))
 
+def imprimir_vector_F(F):
+    print("\n" + "="*42)
+    print("  VECTOR F (Normas al cuadrado)")
+    print("="*42)
+    for i, f in enumerate(F):
+        print(f"  F_{i+1:02d} = {f:.6e}")
+
+def imprimir_vector_B(B):
+    print("\n" + "="*42)
+    print("  VECTOR B (Pesos en Base Ortogonal)")
+    print("="*42)
+    for i, b in enumerate(B):
+        print(f"  B_{i+1:02d} = {b:+.6f}")
 
 # ============================================================
 # Funciones de simulación CCD
@@ -257,10 +270,13 @@ def generar_malla_ccd(
     X_pixel = xv.flatten()
     Y_pixel = yv.flatten()
 
+    X_c = X_pixel - (M - 1) / 2.0
+    Y_c = Y_pixel - (N - 1) / 2.0
+
     if func_z is None:
-        Z = 3 * X_pixel * Y_pixel + 2 * X_pixel
+        Z = 3 * X_c * Y_c + 2 * X_c
     else:
-        Z = func_z(X_pixel, Y_pixel)
+        Z = func_z(X_c, Y_c)
 
     return X_pixel, Y_pixel, Z
 
@@ -285,8 +301,8 @@ def centrar_coordenadas(
     -------
     X_c, Y_c : ndarray (N*M,) -- coordenadas centradas al origen optico
     """
-    X_c = X_pixel - M / 2.0
-    Y_c = Y_pixel - N / 2.0
+    X_c = X_pixel - (M - 1) / 2.0
+    Y_c = Y_pixel - (N - 1) / 2.0
     return X_c, Y_c
 
 
