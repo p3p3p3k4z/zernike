@@ -8,6 +8,7 @@ Modulos:
 """
 
 from .zernike import (
+    ResultadoZernike,
     polinomios_zernike,
     evaluar_polinomios,
     construir_base_ortogonal,
@@ -28,14 +29,18 @@ from .matriz import (
     imprimir_matriz_D,
     imprimir_vectores_V,
     imprimir_matriz_C,
+    parsear_ecuacion_z,
+    descomponer_aberraciones,
 )
 
 from .visualizacion import (
     graficar_flujo_zernike,
+    mapa_fase_3d,
 )
 
 __all__ = [
     # zernike
+    "ResultadoZernike",
     "polinomios_zernike",
     "evaluar_polinomios",
     "construir_base_ortogonal",
@@ -54,6 +59,9 @@ __all__ = [
     "imprimir_matriz_D",
     "imprimir_vectores_V",
     "imprimir_matriz_C",
+    "parsear_ecuacion_z",
+    "descomponer_aberraciones",
     # visualizacion
     "graficar_flujo_zernike",
+    "mapa_fase_3d",
 ]

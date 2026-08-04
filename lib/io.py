@@ -1,26 +1,40 @@
 import pandas as pd
 import numpy as np
 import os
-import builtins
+import logging
 
-_original_print = builtins.print
-_log_file = None
+logger = logging.getLogger("zernike")
 
 def inicializar_logger(filename="python_output.txt"):
     """
-    Inicializa un log que duplica la salida de print hacia un archivo.
-    No utiliza programación orientada a objetos.
+    Inicializa el sistema de logging estándar de Python, configurando
+    la salida tanto a consola como a un archivo, sin sobrescribir
+    builtins.print globalmente.
     """
-    global _log_file
-    _log_file = open(filename, "w", encoding="utf-8")
+    logger.setLevel(logging.INFO)
     
-    def log_print(*args, **kwargs):
-        _original_print(*args, **kwargs)
-        if _log_file is not None and not kwargs.get('file'):
-            _original_print(*args, **kwargs, file=_log_file)
-            _log_file.flush()
-            
-    builtins.print = log_print
+    # Evitar duplicar handlers si se llama multiples veces
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    # Handler para consola
+    c_handler = logging.StreamHandler()
+    c_handler.setLevel(logging.INFO)
+    
+    # Handler para archivo
+    f_handler = logging.FileHandler(filename, mode="w", encoding="utf-8")
+    f_handler.setLevel(logging.INFO)
+
+    # Formato simple
+    formatter = logging.Formatter('%(message)s')
+    c_handler.setFormatter(formatter)
+    f_handler.setFormatter(formatter)
+
+    logger.addHandler(c_handler)
+    logger.addHandler(f_handler)
+
+    # Nota para el usuario sobre el cambio
+    logger.info(f"--- Logger inicializado en archivo: {filename} ---")
 
 def exportar_resultados_csv(X, Y, Z_exp, Z_fit, error, filepath='output/zernike_resultados.csv'):
     """
@@ -54,3 +68,19 @@ def cargar_datos_csv(filepath):
     except Exception as e:
         print(f"  Error al leer el CSV: {e}")
         return None, None, None
+
+def exportar_datos_iniciales_csv(X, Y, Z, filepath='output/datos_iniciales.csv'):
+    """
+    Exporta los datos (X, Y, Z) iniciales generados a un archivo CSV.
+    """
+    try:
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        df_export = pd.DataFrame({
+            'X': X,
+            'Y': Y,
+            'Z': Z
+        })
+        df_export.to_csv(filepath, index=False)
+        print(f"  Datos iniciales exportados a: {filepath}")
+    except Exception as e:
+        print(f"  No se pudo exportar los datos iniciales a CSV: {e}")

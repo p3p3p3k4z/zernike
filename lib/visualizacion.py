@@ -66,7 +66,7 @@ def graficar_flujo_zernike(resultados, intervalo_ms=180, repetir=True):
     Incluye flechas de saltos hacia atras/adelante apuntando exactamente
     a la variable (capa) de la cual depende.
     """
-    L = len(resultados['B'])
+    L = len(resultados.B)
     n_fases = len(_VARS)
     capa_h = 1.0
 
@@ -252,5 +252,47 @@ def graficar_pupila(
     ax.set_aspect('equal')
     ax.grid(True, alpha=0.25)
 
+    plt.tight_layout()
+    return fig
+
+
+def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis'):
+    """
+    Grafica el error residual (Z_exp - Z_fit) en 3D.
+    
+    ¿De dónde sale este Error Residual?
+    -----------------------------------
+    1. Z_exp (Superficie experimental): Son los datos originales ingresados 
+       (provenientes del sensor CCD o archivo CSV).
+    2. Z_fit (Superficie ajustada): Es la superficie idealizada que resulta de la 
+       combinación de los polinomios de Zernike (usando los coeficientes A calculados).
+    
+    Error Residual = Z_exp - Z_fit
+    Calculamos la diferencia punto por punto entre la superficie real y la ajustada.
+
+    ¿Qué representa y cómo interpretarlo?
+    -------------------------------------
+    - Este gráfico 3D es el "ruido" o las deformaciones de alto orden que 
+      nuestro ajuste con Zernike (de grado k=5) NO pudo representar.
+    - Si la superficie es mayormente "plana" y cercana a Z=0, significa que 
+      el modelo de Zernike describió casi perfectamente la lente/espejo.
+    - Si observas picos, valles o patrones muy marcados, significa que la 
+      óptica tiene defectos locales o aberraciones de un grado mayor al que 
+      estamos calculando (mayor a k=5).
+    """
+    from mpl_toolkits.mplot3d import Axes3D
+    
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
+    
+    surf = ax.plot_trisurf(X_c, Y_c, Z_diff, cmap=cmap, linewidth=0.1, alpha=0.85)
+    
+    fig.colorbar(surf, shrink=0.5, aspect=10, pad=0.1, label='Diferencia de fase')
+    
+    ax.set_title(title)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Error')
+    
     plt.tight_layout()
     return fig

@@ -4,12 +4,40 @@ lib/matriz.py
 Funciones para generacion, normalizacion e impresion de matrices
 de datos de superficie optica.
 
-Fuente: poliOrtogonal.ipynb (Cuaderno de Jupyter del proyecto)
 """
 
 import numpy as np
 import pandas as pd
 from typing import Tuple
+import ast
+import operator
+
+
+_ALLOWED_OPERATORS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.Pow: operator.pow,
+    ast.Mod: operator.mod,
+    ast.USub: operator.neg,
+    ast.UAdd: operator.pos,
+}
+
+_ALLOWED_FUNCTIONS = {
+    'sin': np.sin,
+    'cos': np.cos,
+    'tan': np.tan,
+    'sqrt': np.sqrt,
+    'exp': np.exp,
+    'log': np.log,
+    'abs': np.abs,
+}
+
+_ALLOWED_CONSTANTS = {
+    'pi': np.pi,
+    'e': np.e,
+}
 
 
 def normalizar_vector(datos):
@@ -376,43 +404,171 @@ def filtrar_pupila(
         'R':      R,
     }
 
+def _eval_ast_node(node, x_val, y_val):
+    """
+    Motor de seguridad matematico. Recorre de forma recursiva (desde abajo 
+    hacia arriba) el Arbol de Sintaxis Abstracta (AST) generado por ast.parse.
+    
+    Esta es la alternativa segura al uso de eval(), ya que unicamente permite
+    la ejecucion de ramas que sean matematicas estrictas, bloqueando cualquier 
+    intento de inyeccion de codigo malicioso (ej. __import__('os').system(...)).
+
+    Ejemplo conceptual de como el AST ve la ecuacion "3*x^2 + sin(y)":
+        Suma (+)
+          ├── Multiplicacion (*)
+          │     ├── Numero (3)
+          │     └── Potencia (^)
+          │           ├── Variable (x)
+          │           └── Numero (2)
+          └── Funcion (sin)
+                └── Variable (y)
+
+    Reglas de evaluacion:
+    1. Si es un Numero, se retorna directamente.
+    2. Si es una Variable, solo se autorizan 'x' e 'y', reemplazandolas por x_val e y_val.
+    3. Si es una Operacion, se evaluan sus hijos izquierdo y derecho, y luego se opera.
+    4. Si es una Funcion, se valida que pertenezca al diccionario _ALLOWED_FUNCTIONS.
+    """
+    if isinstance(node, ast.Expression):
+        return _eval_ast_node(node.body, x_val, y_val)
+    elif isinstance(node, ast.Constant):
+        return node.value
+    elif isinstance(node, ast.Num):
+        return node.n
+    elif isinstance(node, ast.Name):
+        if node.id == 'x':
+            return x_val
+        elif node.id == 'y':
+            return y_val
+        elif node.id in _ALLOWED_CONSTANTS:
+            return _ALLOWED_CONSTANTS[node.id]
+        raise ValueError(f"Variable no permitida en la ecuación: '{node.id}'")
+    elif isinstance(node, ast.Attribute):
+        if isinstance(node.value, ast.Name) and node.value.id in ('np', 'numpy'):
+            if node.attr in _ALLOWED_FUNCTIONS:
+                return _ALLOWED_FUNCTIONS[node.attr]
+            elif node.attr in _ALLOWED_CONSTANTS:
+                return _ALLOWED_CONSTANTS[node.attr]
+        raise ValueError(f"Atributo no permitido: '{node.attr}'")
+    elif isinstance(node, ast.BinOp):
+        left = _eval_ast_node(node.left, x_val, y_val)
+        right = _eval_ast_node(node.right, x_val, y_val)
+        op_type = type(node.op)
+        if op_type in _ALLOWED_OPERATORS:
+            return _ALLOWED_OPERATORS[op_type](left, right)
+        raise ValueError(f"Operador binario no permitido: {op_type.__name__}")
+    elif isinstance(node, ast.UnaryOp):
+        operand = _eval_ast_node(node.operand, x_val, y_val)
+        op_type = type(node.op)
+        if op_type in _ALLOWED_OPERATORS:
+            return _ALLOWED_OPERATORS[op_type](operand)
+        raise ValueError(f"Operador unario no permitido: {op_type.__name__}")
+    elif isinstance(node, ast.Call):
+        func = _eval_ast_node(node.func, x_val, y_val)
+        if not callable(func):
+            if isinstance(node.func, ast.Name) and node.func.id in _ALLOWED_FUNCTIONS:
+                func = _ALLOWED_FUNCTIONS[node.func.id]
+            else:
+                raise ValueError(f"Función no permitida: {node.func}")
+        args = [_eval_ast_node(arg, x_val, y_val) for arg in node.args]
+        return func(*args)
+    else:
+        raise ValueError(f"Elemento AST no permitido: {type(node).__name__}")
+
 
 def parsear_ecuacion_z(expr_str: str):
     """
-    Convierte una cadena de texto que contiene una formula matematica en x, y
-    en una funcion ejecutable (callable) de Python.
-    Permite el uso de numpy (como np.sin, np.cos, np.sqrt, np.exp, etc.).
+    Convierte una cadena con una formula matematica en x, y en una funcion
+    ejecutable de Python utilizando un parser AST seguro (sin eval).
+    Permite el uso de funciones avanzadas (sin, cos, tan, sqrt, exp, log, abs)
+    y constantes matematicas (pi, e).
+
+    Ejemplos de ecuaciones validas que soporta el parser:
+      - Polinomios cartesianos : "3*x^2 + 2*x*y"
+      - Ondas simples          : "sin(x) + cos(y)"
+      - Superficies complejas  : "sqrt(x^2 + y^2) * 0.5"
+      - Oscilaciones radiales  : "sin(pi * x) * exp(y)"
     """
     expr_str = expr_str.strip()
     if not expr_str:
         return None
 
-    # Entorno seguro de evaluacion con funciones matematicas usuales de numpy
-    safe_dict = {
-        'x': None,
-        'y': None,
-        'np': np,
-        'sin': np.sin,
-        'cos': np.cos,
-        'tan': np.tan,
-        'sqrt': np.sqrt,
-        'exp': np.exp,
-        'log': np.log,
-        'pi': np.pi,
-        'abs': np.abs,
-    }
-
-    # Permitir la notacion '^' reemplazandola por '**'
     expr_eval = expr_str.replace('^', '**')
 
-    # Retorna una funcion ejecutable
+    try:
+        parsed_ast = ast.parse(expr_eval, mode='eval')
+    except SyntaxError as e:
+        raise ValueError(f"Error de sintaxis en la ecuación '{expr_str}': {e}")
+
     def func(x, y):
-        context = safe_dict.copy()
-        context['x'] = x
-        context['y'] = y
         try:
-            return eval(expr_eval, {"__builtins__": None}, context)
+            return _eval_ast_node(parsed_ast, x, y)
         except Exception as e:
-            raise ValueError(f"Error al evaluar la ecuacion '{expr_str}': {e}")
+            raise ValueError(f"Error al evaluar la ecuación '{expr_str}': {e}")
 
     return func
+
+
+def descomponer_aberraciones(A: np.ndarray) -> dict:
+    """
+    Descompone el vector de coeficientes de Zernike A (ISO 10110-5)
+    en componentes fisicas de aberraciones opticas.
+
+    Parametros
+    ----------
+    A : ndarray (L,) -- Coeficientes de Zernike (minimo 13 para esferica)
+
+    Retorna
+    -------
+    dict con magnitudes de aberraciones fisicas
+    """
+    L = len(A)
+    
+    # El vector A contiene los coeficientes para la base ortogonal de Zernike, 
+    # indexados segun la norma (ej. ISO 10110-5 o estandar ANSI).
+    # Aqui extraemos las aberraciones primarias (Seidel) mapeando su indice
+    # base 0 de Python correspondiente al orden teorico:
+    
+    # A[0]: Término constante o Pistón (Desplazamiento promedio del frente de onda)
+    piston = A[0] if L > 0 else 0.0
+    
+    # A[1], A[2]: Tilt (Inclinación) en los ejes X e Y respectivamente
+    tilt_x = A[1] if L > 1 else 0.0
+    tilt_y = A[2] if L > 2 else 0.0
+    
+    # A[3]: Astigmatismo oblicuo (eje a 45 grados)
+    astig_45 = A[3] if L > 3 else 0.0
+    
+    # A[4]: Defocus (Desenfoque, error de potencia esferica)
+    defocus = A[4] if L > 4 else 0.0
+    
+    # A[5]: Astigmatismo primario o vertical/horizontal (eje a 0 grados)
+    astig_0 = A[5] if L > 5 else 0.0
+    
+    # A[6], A[7]: Coma primaria en X e Y (asimetria de la aberracion)
+    coma_x = A[6] if L > 6 else 0.0
+    coma_y = A[7] if L > 7 else 0.0
+    
+    # A[12]: Aberracion Esferica de 3er orden (simetrica respecto al centro)
+    # Nota: Los indices intermedios (A[8]-A[11]) corresponden a trefoil y astigmatismos de mayor orden.
+    esferica_3rd = A[12] if L > 12 else 0.0
+
+    tilt_total = np.sqrt(tilt_x**2 + tilt_y**2)
+    astig_total = np.sqrt(astig_45**2 + astig_0**2)
+    coma_total = np.sqrt(coma_x**2 + coma_y**2)
+
+    return {
+        'Piston': float(piston),
+        'Tilt_X': float(tilt_x),
+        'Tilt_Y': float(tilt_y),
+        'Tilt_Total': float(tilt_total),
+        'Defocus': float(defocus),
+        'Astigmatismo_45': float(astig_45),
+        'Astigmatismo_0': float(astig_0),
+        'Astigmatismo_Total': float(astig_total),
+        'Coma_X': float(coma_x),
+        'Coma_Y': float(coma_y),
+        'Coma_Total': float(coma_total),
+        'Esferica_3er_orden': float(esferica_3rd),
+        'RMS_Total': float(np.sqrt(np.sum(A**2))),
+    }

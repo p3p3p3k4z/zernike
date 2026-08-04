@@ -11,6 +11,38 @@ Referencia: Malacara, D. (1990). Optical Shop Testing.
 """
 
 import numpy as np
+from typing import NamedTuple, Any
+
+
+class ResultadoZernike(NamedTuple):
+    """
+    Registro inmutable de resultados del ajuste de Zernike (ISO 10110-5).
+    Soporta acceso por atributo (res.A, res.W_fit) y por clave (res['A'])
+    para preservar el paradigma funcional y compatibilidad retroactiva.
+    """
+    U: np.ndarray
+    V: list
+    D: np.ndarray
+    F: Any
+    B: np.ndarray
+    C: np.ndarray
+    A: np.ndarray
+    W_fit: np.ndarray
+    X: np.ndarray
+    Y: np.ndarray
+    W: np.ndarray
+
+    def __getitem__(self, item):
+        if isinstance(item, str):
+            if hasattr(self, item):
+                return getattr(self, item)
+            raise KeyError(f"Clave '{item}' no encontrada en ResultadoZernike")
+        return tuple.__getitem__(self, item)
+
+    def get(self, key: str, default=None):
+        if hasattr(self, key):
+            return getattr(self, key)
+        return default
 
 
 def polinomios_zernike():
@@ -151,7 +183,7 @@ def reconstruir_W(A, U):
     return np.dot(A, U)
 
 
-def ajuste_completo(X, Y, W, polinomios, k=5):
+def ajuste_completo(X, Y, W, polinomios, k=5) -> ResultadoZernike:
     """
     Ejecuta los 7 pasos del algoritmo de ajuste de Zernike.
 
@@ -162,7 +194,9 @@ def ajuste_completo(X, Y, W, polinomios, k=5):
     polinomios : list[callable] -- lista de L lambdas de Zernike
     k          : int            -- grado maximo (fijo = 5 -> L = 21)
 
-    Retorna dict con: U, V, D, F, B, C, A, W_fit, X, Y
+    Retorna
+    -------
+    ResultadoZernike (NamedTuple inmutable)
     """
     L = (k + 1) * (k + 2) // 2  # 21 para k=5
 
@@ -173,9 +207,10 @@ def ajuste_completo(X, Y, W, polinomios, k=5):
     A = calcular_A(B, C, L)
     W_fit = reconstruir_W(A, U)
 
-    return {'U': U, 'V': V, 'D': D, 'F': F,
-            'B': B, 'C': C, 'A': A,
-            'W_fit': W_fit, 'X': X, 'Y': Y, 'W': W}
+    return ResultadoZernike(
+        U=U, V=V, D=D, F=F, B=B, C=C, A=A,
+        W_fit=W_fit, X=X, Y=Y, W=W
+    )
 
 
 def verificar_ortogonalidad(V, tolerancia=1e-10):

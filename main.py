@@ -37,8 +37,9 @@ from lib.matriz import (
     poli_zenike_print,
     imprimir_vector_F,
     imprimir_vector_B,
+    descomponer_aberraciones,
 )
-from lib.io import exportar_resultados_csv, cargar_datos_csv, inicializar_logger
+from lib.io import exportar_resultados_csv, cargar_datos_csv, inicializar_logger, exportar_datos_iniciales_csv
 
 # Configurar el logger funcional (sin clases/POO) para capturar print()
 inicializar_logger("python_output.txt")
@@ -47,6 +48,7 @@ from lib.visualizacion import (
     graficar_flujo_zernike,
     graficar_distribucion_ccd,
     graficar_pupila,
+    mapa_fase_3d,
 )
 
 
@@ -100,6 +102,9 @@ def seccion_zernike(X_n, Y_n, W_n, nombre_flujo="Cuadrante I"):
     print(f"  Datos: {nombre_flujo}")
     print("  Grado polinomial: k = 5  (L = 21 polinomios)")
     print("="*60)
+    
+    # Exportar exactamente los datos que van a ser procesados por Zernike
+    exportar_datos_iniciales_csv(X_n, Y_n, W_n, filepath='output/datos_filtrados_fortran.csv')
 
     # Generar datos en el circulo unitario
     # N = 50
@@ -121,37 +126,48 @@ def seccion_zernike(X_n, Y_n, W_n, nombre_flujo="Cuadrante I"):
 
     poli_zenike_print(X_n, Y_n, polinomios, n_rows=N)
 
-    imprimir_matriz_D(resultados['D'])
-    imprimir_vector_F(resultados['F'])
-    imprimir_vectores_V(resultados['V'], n_puntos=N)
-    imprimir_vector_B(resultados['B'])
-    imprimir_matriz_C(resultados['C'])
+    imprimir_matriz_D(resultados.D)
+    imprimir_vector_F(resultados.F)
+    imprimir_vectores_V(resultados.V, n_puntos=N)
+    imprimir_vector_B(resultados.B)
+    imprimir_matriz_C(resultados.C)
 
-    verificar_ortogonalidad(resultados['V'])
+    verificar_ortogonalidad(resultados.V)
     verificar_formulas(resultados)
 
     print("\n--- Coeficientes de Zernike A ---")
-    A = resultados['A']
+    A = resultados.A
     for r in range(L):
         print(f"  A_{r+1:2d} = {A[r]:+.6f}")
 
+    print("\n--- Descomposicion de Aberraciones Opticas ---")
+    aberraciones = descomponer_aberraciones(A)
+    for nombre, valor in aberraciones.items():
+        print(f"  {nombre:20s}: {valor:+.6f}")
+
     # ---- Error RMS ----
-    error = W_n - resultados['W_fit']
+    error = W_n - resultados.W_fit
     rms = np.sqrt(np.mean(error**2))
     print(f"\nError RMS del ajuste: {rms:.2e}")
 
     # ---- Exportar a CSV ----
-    exportar_resultados_csv(X_n, Y_n, W_n, resultados['W_fit'], error)
+    exportar_resultados_csv(X_n, Y_n, W_n, resultados.W_fit, error)
 
     return resultados, X_n, Y_n, W_n
 
 
-def seccion_animacion(resultados):
+def seccion_animacion(resultados, X, Y, W_n):
     print("\n" + "="*60)
-    print("  Animacion Recursiva")
+    print("  Animacion Recursiva y Mapa 3D")
     print("="*60)
 
     fig, anim = graficar_flujo_zernike(resultados, intervalo_ms=800, repetir=True)
+    
+    # 2. Mapa de Fase 3D
+    error_residual = W_n - resultados.W_fit
+    fig_3d = mapa_fase_3d(X, Y, error_residual, title='Error Residual 3D')
+    
+    # Mostrar todas las gráficas (si el entorno lo permite)
     plt.show()
 
 
@@ -223,7 +239,11 @@ def seccion_ccd_sensor():
     print("\n--- Configuracion de la Superficie Z ---")
     print("  Ingresa la ecuacion para Z en terminos de x e y (ej: 2*x*y, x**2 + y**2, 3*x*y + 2*x)")
     print("  Presiona ENTER para usar la ecuacion por defecto (Z = 3*x*y + 2*x)")
-    ecuacion_input = input("  Z = ").strip()
+    try:
+        ecuacion_input = input("  Z = ").strip()
+    except EOFError:
+        print(" (Usando ecuación por defecto debido a EOF)")
+        ecuacion_input = ""
 
     func_z = None
     if ecuacion_input:
@@ -237,17 +257,24 @@ def seccion_ccd_sensor():
 
     # --- Entrada del usuario ---
     print("\n  Ingresa las dimensiones del sensor:")
-    N = int(input("    Numero de filas  (N): "))
-    M = int(input("    Numero de columnas (M): "))
-    diametro = float(input(
-        f"\n  Diametro maximo posible: {min(N, M):.0f} px\n"
-        f"  Ingresa el diametro de la pupila: "
-    ))
+    try:
+        N = int(input("    Numero de filas  (N): "))
+        M = int(input("    Numero de columnas (M): "))
+        diametro = float(input(
+            f"\n  Diametro maximo posible: {min(N, M):.0f} px\n"
+            f"  Ingresa el diametro de la pupila: "
+        ))
+    except EOFError:
+        print("\n  (Usando valores por defecto debido a EOF: N=100, M=100, diametro=100)")
+        N, M = 100, 100
+        diametro = 100.0
 
     print("\n" + "-"*40)
     print(f"  Generando malla de {N} x {M} = {N*M} pixeles...")
     X_pixel, Y_pixel, Z_raw = generar_malla_ccd(N, M, func_z=func_z)
     X_c, Y_c = centrar_coordenadas(X_pixel, Y_pixel, N, M)
+    
+    exportar_datos_iniciales_csv(X_c, Y_c, Z_raw, filepath='output/ccd_sensor_iniciales.csv')
     
     print(f"  Centro optico en (0, 0)")
     print(f"  X en [{X_c.min():.1f}, {X_c.max():.1f}]")
@@ -331,7 +358,11 @@ if __name__ == "__main__":
     print("  4) CCD        -> 4 cuadrantes fijos + filtro (Legacy)")
     print("  5) CUADRANTE  -> Cuadrante I (Demostracion de error)")
     
-    opcion = input("\nIngresa una opcion [1]: ").strip()
+    try:
+        opcion = input("\nIngresa una opcion [1]: ").strip()
+    except EOFError:
+        print("1 (Seleccion automatica por falta de terminal interactiva)")
+        opcion = "1"
     
     if opcion == "2":
         FLUJO = "CSV"
@@ -347,13 +378,13 @@ if __name__ == "__main__":
     if FLUJO == "CSV":
         resultado_csv = seccion_importar_csv()
         if resultado_csv is not None:
-            resultados, *_ = resultado_csv
-            seccion_animacion(resultados)
+            resultados, X, Y, W_n = resultado_csv
+            seccion_animacion(resultados, X, Y, W_n)
 
     elif FLUJO == "CUADRANTE":
         X1_n, Y1_n, Z1_n = seccion_matrices()
         resultados, X, Y, W_n = seccion_zernike(X1_n, Y1_n, Z1_n, "Cuadrante I")
-        seccion_animacion(resultados)
+        seccion_animacion(resultados, X, Y, W_n)
 
     elif FLUJO == "CIRCULO":
         print("\n" + "="*60)
@@ -364,19 +395,19 @@ if __name__ == "__main__":
         Z_c_n = normalizar_vector(Z_c)
         imprimir_matriz_n_puntos(X_c, Y_c, Z_c_n, "MATRIZ: CIRCULO UNITARIO")
         resultados, X, Y, W_n = seccion_zernike(X_c, Y_c, Z_c_n, "Circulo Unitario")
-        seccion_animacion(resultados)
+        seccion_animacion(resultados, X, Y, W_n)
 
     elif FLUJO == "CCD":
         resultado_ccd = seccion_ccd()
         if resultado_ccd is not None:
-            resultados, *_ = resultado_ccd
-            seccion_animacion(resultados)
+            resultados, X, Y, W_n = resultado_ccd
+            seccion_animacion(resultados, X, Y, W_n)
 
     elif FLUJO == "CCD_SENSOR":
         resultado_ccd = seccion_ccd_sensor()
         if resultado_ccd is not None:
-            resultados, *_ = resultado_ccd
-            seccion_animacion(resultados)
+            resultados, X, Y, W_n = resultado_ccd
+            seccion_animacion(resultados, X, Y, W_n)
 
 """
 ============================================================
