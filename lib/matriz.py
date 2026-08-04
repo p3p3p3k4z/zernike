@@ -433,8 +433,6 @@ def _eval_ast_node(node, x_val, y_val):
         return _eval_ast_node(node.body, x_val, y_val)
     elif isinstance(node, ast.Constant):
         return node.value
-    elif isinstance(node, ast.Num):
-        return node.n
     elif isinstance(node, ast.Name):
         if node.id == 'x':
             return x_val
@@ -442,6 +440,8 @@ def _eval_ast_node(node, x_val, y_val):
             return y_val
         elif node.id in _ALLOWED_CONSTANTS:
             return _ALLOWED_CONSTANTS[node.id]
+        elif node.id in _ALLOWED_FUNCTIONS:
+            return _ALLOWED_FUNCTIONS[node.id]
         raise ValueError(f"Variable no permitida en la ecuación: '{node.id}'")
     elif isinstance(node, ast.Attribute):
         if isinstance(node.value, ast.Name) and node.value.id in ('np', 'numpy'):

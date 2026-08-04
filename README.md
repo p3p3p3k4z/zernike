@@ -20,10 +20,10 @@ cd zernike
 # Crear entorno virtual e instalar dependencias principales
 uv sync
 
-# (opcional) instalar con dependencias de desarrollo: Jupyter, ipykernel
+# (opcional) instalar dependencias de desarrollo (Jupyter, pytest):
 uv sync --extra dev
 
-# (opcional) instalar dependencias experimentales para el modelo SR-GAN
+# (opcional) instalar dependencias experimentales para el modelo SR-GAN:
 uv sync --extra srgan
 ```
 
@@ -37,13 +37,34 @@ El entorno virtual se crea automáticamente en `.venv/`.
 uv run python main.py
 ```
 
-El programa realiza las siguientes etapas en secuencia y muestra la animación al final:
+El programa principal incluye varios flujos de simulación interactivos (Malla CCD, Importación CSV, Círculo unitario aleatorio, etc.):
 
-| Sección | Descripción |
-|---------|-------------|
-| **1 — Matrices** | Genera 4 matrices de cuadrante con `Z = 3xy + 2x`, las normaliza con `normalizar_vector` e imprime |
-| **2 — Flujo Zernike** | Crea 50 puntos en el círculo unitario, ejecuta el flujo completo (U → V → D → B → C → A), verifica ortogonalidad y fórmulas, imprime coeficientes y error RMS |
-| **3 — Animación** | Ventana interactiva de matplotlib con la animación del flujo recursivo |
+| Flujo | Descripción |
+|---|---|
+| **1 — CCD_SENSOR** | Malla simétrica $N \times M$ de píxeles CCD con origen en el centro óptico, filtrada por pupila circular y evaluación matemática configurable. |
+| **2 — CSV** | Carga de datos experimentales desde archivo `.csv` $(X, Y, Z)$. |
+| **3 — CIRCULO** | Generación uniforme de puntos en el círculo unitario ($N=50$). |
+| **4 — CCD (Legacy)** | Simulación sobre 4 cuadrantes fijos con filtro de pupila. |
+| **5 — CUADRANTE** | Demostración de desbordamiento por dominio asimétrico (Cuadrante I). |
+
+Al finalizar la sección de Zernike, el programa imprime los coeficientes $A$, realiza la **descomposición de aberraciones ópticas primarias** y muestra el **mapa tridimensional del error residual**.
+
+---
+
+## 🧪 Ejecutar las Pruebas Unitarias
+
+El proyecto cuenta con una suite completa de pruebas unitarias automatizadas en la carpeta `tests/`:
+
+```bash
+uv run pytest
+```
+
+Para ver la ejecución detallada de cada test:
+```bash
+uv run pytest -v
+```
+
+*(Consulta la guía didáctica en [tests/README.md](file:///home/m4r10/Documents/projects/zernike/tests/README.md) para más información sobre cómo funcionan las pruebas).*
 
 ---
 
@@ -53,14 +74,18 @@ El programa realiza las siguientes etapas en secuencia y muestra la animación a
 zernike/
 ├── lib/
 │   ├── __init__.py        # Exporta todos los símbolos públicos
-│   ├── zernike.py         # Motor matemático (Gram-Schmidt, coeficientes A, B, C)
-│   ├── matriz.py          # Generación e impresión de matrices de datos
-│   └── visualizacion.py   # Animación matplotlib del flujo recursivo
-├── main.py                # Programa de pruebas (punto de entrada)
-├── pyproject.toml         # Configuración del proyecto (uv)
-├── test_flujo.py          # Script de referencia original
+│   ├── zernike.py         # Motor matemático (Gram-Schmidt, ResultadoZernike, coeficientes A, B, C)
+│   ├── matriz.py          # Parser AST seguro, descomposición de aberraciones, mallas CCD y pupila
+│   ├── io.py              # Sistema de logging estándar y exportación a CSV
+│   └── visualizacion.py   # Animación de flujo recursivo y mapa 3D de error residual
+├── tests/
+│   ├── README.md          # Guía didáctica de pruebas unitarias
+│   ├── test_matriz.py     # Pruebas para normalización, parser AST y aberraciones
+│   └── test_zernike.py    # Pruebas para Gram-Schmidt, ortogonalidad y ajuste completo
+├── main.py                # Programa principal e interfaz interactiva CLI
+├── pyproject.toml         # Configuración del proyecto y dependencias (uv)
 ├── poliOrtogonal.ipynb    # Cuaderno Jupyter de desarrollo
-└── README.md
+└── README.md              # Documentación general del proyecto
 ```
 
 ---
@@ -70,7 +95,7 @@ zernike/
 ```
 Datos (X, Y, W)
       │
-      ▼  normalizar_vector(W)
+      ▼  normalizar_vector(W) / filtrar_pupila()
       │
       ▼  evaluar_polinomios()
       U  ── Matriz de diseño (L × N),  L=21, N=puntos
@@ -87,8 +112,8 @@ Datos (X, Y, W)
       ▼  calcular_A()                 [Ec. 26, Malacara 1990]
       A  ── Coeficientes de Zernike ISO 10110-5
       │
-      ▼  reconstruir_W()
-   W_fit  ── Superficie ajustada  = A · U
+      ▼  reconstruir_W() & descomponer_aberraciones()
+   W_fit ── Superficie ajustada  = A · U
 ```
 
 **Invariante verificable:**  
@@ -96,115 +121,52 @@ Datos (X, Y, W)
 
 ---
 
+## Resumen de Módulos y Funciones
+
 ### `lib.zernike`
 
-| Función | Descripción |
-|---------|-------------|
-| `polinomios_zernike()` | Lista de 21 lambdas (k=5, ISO 10110-5) |
-| `evaluar_polinomios(X, Y, polis)` | Construye matriz U (L × N) |
-| `construir_base_ortogonal(U)` | Gram-Schmidt → V, D, F |
-| `calcular_B(W, V, F)` | Pesos ortogonales B |
-| `calcular_C(D, L)` | Matriz de traducción C |
-| `calcular_A(B, C, L)` | Coeficientes ISO A |
-| `reconstruir_W(A, U)` | Superficie ajustada W_fit |
-| `ajuste_completo(X, Y, W, polis)` | Orquestador — devuelve dict con U,V,D,F,B,C,A,W_fit |
-| `verificar_ortogonalidad(V)` | Valida ⟨Vᵢ, Vⱼ⟩ ≈ 0 |
-| `verificar_formulas(resultados)` | Validación cruzada de Ecs. 23 y 26 |
+| Función / Estructura | Descripción |
+|---|---|
+| `ResultadoZernike` | Contenedor de datos inmutable (NamedTuple) con acceso doble: atributo (`res.A`) y clave dict (`res['A']`). |
+| `polinomios_zernike()` | Lista de 21 lambdas ($k=5$, ISO 10110-5). |
+| `evaluar_polinomios(X, Y, polis)` | Construye matriz $U$ ($L \times N$). |
+| `construir_base_ortogonal(U)` | Gram-Schmidt $\rightarrow V, D, F$. |
+| `calcular_B(W, V, F)` | Pesos ortogonales $B$. |
+| `calcular_C(D, L)` | Matriz de traducción $C$. |
+| `calcular_A(B, C, L)` | Coeficientes ISO $A$. |
+| `reconstruir_W(A, U)` | Superficie ajustada $W_{fit}$. |
+| `ajuste_completo(X, Y, W, polis)` | Orquestador — devuelve `ResultadoZernike`. |
+| `verificar_ortogonalidad(V)` | Valida $\langle V_i, V_j \rangle \approx 0$. |
+| `verificar_formulas(resultados)` | Validación cruzada de Ecs. 23 y 26 (retorna `bool`). |
 
 ### `lib.matriz`
 
 | Función | Descripción |
-|---------|-------------|
-| `normalizar_vector(datos)` | Escala al rango [-1, 1] por max absoluto |
-| `generar_datos_circulo(N, semilla)` | N puntos uniformes en el círculo unitario, Z = 3xy + 2x |
-| `matriz3d_cuadrante(x0,x1,y0,y1)` | Malla cartesiana de un cuadrante, Z = 3xy + 2x |
-| `imprimir_matriz_n_puntos(X,Y,Z,nombre)` | Imprime [X, Y, Z] en bloques de 5 |
-| `imprimir_matriz_D(D)` | Imprime D triangular inferior |
-| `imprimir_vectores_V(V, n_puntos)` | Muestreo de los vectores ortogonales |
-| `imprimir_matriz_C(C)` | Imprime C triangular inferior |
+|---|---|
+| `parsear_ecuacion_z(expr_str)` | Evaluador de ecuaciones seguro basado en AST (soporta polinómicas, trigonométricas `sin, cos, tan`, `sqrt, exp, log` y constantes `pi, e`). |
+| `descomponer_aberraciones(A)` | Traduce el vector $A$ a Pistón, Tilt X/Y, Defocus, Astigmatismo 0°/45°, Coma X/Y, Aberración Esférica de 3er orden y RMS Total. |
+| `normalizar_vector(datos)` | Escala vectores al rango $[-1, 1]$ por su valor máximo absoluto. |
+| `generar_malla_ccd(N, M, func_z)` | Genera una cuadrícula de $N \times M$ píxeles de un sensor CCD. |
+| `centrar_coordenadas(X, Y, N, M)` | Centra las coordenadas cartesianas al centro óptico $(0, 0)$. |
+| `filtrar_pupila(X, Y, Z, diametro)` | Filtra y normaliza los puntos dentro del círculo de la pupila. |
+
+### `lib.io`
+
+| Función | Descripción |
+|---|---|
+| `inicializar_logger(filename)` | Configura el logger estándar de Python (`logging.getLogger("zernike")`) para consola y archivo sin monkey-patching. |
+| `exportar_resultados_csv(...)` | Exporta coordenadas, datos reales, ajustados y error residual a CSV. |
 
 ### `lib.visualizacion`
 
 | Función | Descripción |
-|---------|-------------|
-| `graficar_flujo_zernike(resultados, intervalo_ms)` | Animación del flujo con matplotlib |
+|---|---|
+| `graficar_flujo_zernike(resultados)` | Ventana interactiva de Matplotlib con la animación del flujo recursivo de capas. |
+| `mapa_fase_3d(X, Y, Z_diff)` | Gráfica 3D del error residual ($Z_{exp} - Z_{fit}$) para identificar deformaciones ópticas no capturadas. |
 
 ---
 
-## Animación del flujo
-
-La animación revela cada etapa **barra a barra**, con un color distintivo por variable:
-
-| Variable | Color | Rol |
-|----------|-------|-----|
-| **U** | 🔵 Azul `#2196F3` | Base de Zernike evaluada |
-| **V** | 🟢 Verde `#4CAF50` | Base ortogonalizada |
-| **D** | 🔴 Rojo `#F44336` | Coeficientes de proyección |
-| **B** | 🟠 Naranja `#FF9800` | Pesos en base ortogonal |
-| **C** | 🟣 Púrpura `#9C27B0` | Matriz de traducción |
-| **A** | 🔵 Cian `#00BCD4` | Coeficientes Zernike ISO |
-
-La ventana incluye además un **diagrama de pipeline** (inferior) que resalta la etapa activa, y un **scatter** de la superficie ajustada W_fit sobre el círculo unitario.
-
----
-### Zernike en C
-Rescritura del programa en **C** para garantizar el máximo rendimiento, gestionando memoria explícitamente y evitando dependencias de Python para equipos con menos recursos.
-
-### Requisitos para C
-- Compilador `gcc` y herramientas de construcción (`make`).
-- Librería de desarrollo de ncurses (ej. `libncurses5-dev` en Ubuntu/Debian).
-
-### Compilar y Ejecutar
-
-```bash
-cd c_impl
-make clean
-make
-./bin/zernike_app
-```
-
----
-
-## Ejecutar el Jupyter Notebook
-
-```bash
-uv sync --extra dev
-uv run jupyter notebook poliOrtogonal.ipynb
-```
-
----
-
-## Módulo Experimental de Superresolución (SR-GAN)
-
-Hemos incorporado un entorno experimental para aumentar la resolución de interferogramas de $32\times32$ a $128\times128$ píxeles, empleando una red neuronal generativa (SR-GAN), seguido de una reconstrucción matemática idealizada con Zernike.
-
-**1. Preprocesamiento Inteligente (Bounding Box)**  
-Antes de alimentar la red, el sistema incluye un algoritmo de **Auto-Recorte Inteligente**. Este detecta la pupila circular ignorando el ruido oscuro del sensor y ajusta un cuadrado perfecto (Bounding Box) alrededor del interferograma para evitar deformaciones elípticas.
-Puedes probar cómo recorta tus fotos sin necesidad de correr la red neuronal:
-```bash
-uv run python test/inference.py test/Interferogramas/Imagen10.jpg --preprocess-only
-```
-Esto guardará la imagen centrada y recortada en `test/resultados_sr/`.
-
-**2. Entrenar el modelo (Generación de pesos)**  
-Para poder realizar la inferencia completa, primero necesitas generar los pesos de la red. Ejecuta:
-```bash
-uv run python test/train_srgan.py --epochs 100
-```
-Esto creará los archivos de pesos (`generator_epoch_100.pth` y `discriminator_epoch_100.pth`) dentro de la carpeta `test`.
-
-**3. Inferencia Completa y Reconstrucción Zernike**  
-Pasa una imagen para ejecutar todo el flujo: recortará, hará superresolución con SR-GAN (128x128), y finalmente extraerá el modelo idealizado libre de ruido (`W_fit`) con los polinomios de Zernike.
-
-```bash
-uv run python test/inference.py test/Interferogramas/Imagen10.jpg
-```
-*Si tu archivo de pesos está en otra ubicación, usa `--weights /ruta/al/archivo.pth`.*
-Se abrirá una gráfica comparativa y se guardarán 4 variantes de resultados en `test/resultados_sr/`.
-
----
-
-## Referencia
+## Referencias
 
 > Malacara, D. (Ed.). (1990). *Optical Shop Testing* (2nd ed.). Wiley.  
 > ISO 10110-5: *Optics and photonics — Preparation of drawings for optical elements and systems — Part 5: Surface form tolerances*.

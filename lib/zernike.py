@@ -349,3 +349,5 @@ def verificar_formulas(resultados):
     else:
         print("  ==> ALGUNAS FORMULAS FALLARON <==")
 
+    return todas_ok
+

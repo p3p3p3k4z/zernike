@@ -15,6 +15,7 @@ dependencies = [
 dev = [
     "ipykernel>=6.0",
     "jupyter>=1.0",
+    "pytest>=7.0",
 ]
 srgan = [
     "torch>=2.13.0",
@@ -26,6 +27,7 @@ srgan = [
 dev = [
     "ipykernel>=6.0",
     "jupyter>=1.0",
+    "pytest>=7.0",
 ]
 
 [build-system]
