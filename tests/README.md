@@ -43,6 +43,7 @@ Si el `assert` evalúa una condición **verdadera** (`True`), la prueba pasa. Si
 - **`test_parsear_ecuacion_z_invalid`**: Comprueba la seguridad del parser bloqueando variables no permitidas (`z`) y funciones maliciosas.
 - **`test_descomponer_aberraciones`**: Revisa la traducción de coeficientes $A_1 \dots A_{21}$ a magnitudes ópticas (Pistón, Tilt, Desenfoque, Astigmatismo, Aberración Esférica).
 - **`test_filtrar_pupila_y_centrado`**: Valida el centrado de píxeles al origen óptico y el recorte circular.
+- **`test_exportar_zemax_y_codev`**: Valida la generación correcta de archivos de coeficientes para Zemax OpticStudio (`.zrn`) y CODE V (`.dat`).
 
 #### `test_zernike.py`
 - **`test_polinomios_zernike_count`**: Comprueba que la base para grado $k=5$ cargue los 21 polinomios exactos.
@@ -71,7 +72,7 @@ uv run pytest tests/test_matriz.py
 
 ---
 
-## 💡 ¿Cómo añadir un nuevo Test?
+## ¿Como añadir un nuevo Test?
 
 Para agregar una nueva prueba en el futuro:
 1. Abre el archivo de prueba correspondiente (o crea uno nuevo `test_mi_modulo.py`).

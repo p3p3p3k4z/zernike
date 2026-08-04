@@ -200,3 +200,42 @@ def test_filtrar_pupila_y_centrado():
     # Todos los puntos dentro de la pupila normalizados deben ser <= 1.0 en módulo
     assert np.all(np.abs(datos_pupila['X_norm']) <= 1.0)
     assert np.all(np.abs(datos_pupila['Y_norm']) <= 1.0)
+
+
+def test_exportar_zemax_y_codev(tmp_path):
+    """
+    OBJETIVO: Probar la exportación de archivos a formatos estándar (Zemax OpticStudio y CODE V).
+
+    ¿QUÉ PROBAMOS?
+    1. Que las funciones generen los archivos en la ruta especificada.
+    2. Que el archivo de Zemax contenga los encabezados requeridos (PUPIL_RADIUS_MM, WAVELENGTH_UM).
+    3. Que el archivo de CODE V contenga la cabecera e instrucciones de superficie (NRAD, ZFR).
+    """
+    from lib.io import exportar_zemax, exportar_codev
+
+    A_test = np.zeros(21)
+    A_test[1] = 0.0267  # Tilt X
+    A_test[3] = 1.0012  # Astigmatismo
+
+    # 1. Probar Zemax (.zrn)
+    file_zemax = tmp_path / "test_zemax.zrn"
+    ok_zemax = exportar_zemax(A_test, R_pupila=50.0, longitud_onda=0.6328, filepath=str(file_zemax))
+    assert ok_zemax is True
+    assert file_zemax.exists()
+
+    contenido_zemax = file_zemax.read_text(encoding='utf-8')
+    assert "ZEMAX OpticStudio" in contenido_zemax
+    assert "PUPIL_RADIUS_MM      50.000000" in contenido_zemax
+    assert "NUM_COEFFICIENTS     21" in contenido_zemax
+
+    # 2. Probar CODE V (.dat)
+    file_codev = tmp_path / "test_codev.dat"
+    ok_codev = exportar_codev(A_test, R_pupila=50.0, filepath=str(file_codev))
+    assert ok_codev is True
+    assert file_codev.exists()
+
+    contenido_codev = file_codev.read_text(encoding='utf-8')
+    assert "CODE V Zernike Surface Data File" in contenido_codev
+    assert "NRAD 50.000000" in contenido_codev
+    assert "ZFR 21" in contenido_codev
+

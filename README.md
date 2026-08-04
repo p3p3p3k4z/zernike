@@ -51,7 +51,7 @@ Al finalizar la sección de Zernike, el programa imprime los coeficientes $A$, r
 
 ---
 
-## 🧪 Ejecutar las Pruebas Unitarias
+## Ejecutar las Pruebas Unitarias
 
 El proyecto cuenta con una suite completa de pruebas unitarias automatizadas en la carpeta `tests/`:
 
@@ -64,7 +64,7 @@ Para ver la ejecución detallada de cada test:
 uv run pytest -v
 ```
 
-*(Consulta la guía didáctica en [tests/README.md](file:///home/m4r10/Documents/projects/zernike/tests/README.md) para más información sobre cómo funcionan las pruebas).*
+*(Consulta la guia en [tests/README.md](file:///home/m4r10/Documents/projects/zernike/tests/README.md) para más información sobre cómo funcionan las pruebas).*
 
 ---
 
@@ -156,6 +156,8 @@ Datos (X, Y, W)
 |---|---|
 | `inicializar_logger(filename)` | Configura el logger estándar de Python (`logging.getLogger("zernike")`) para consola y archivo sin monkey-patching. |
 | `exportar_resultados_csv(...)` | Exporta coordenadas, datos reales, ajustados y error residual a CSV. |
+| `exportar_zemax(A, R_pupila, lambda)` | Exporta los coeficientes de Zernike al formato estándar de Zemax OpticStudio (`.zrn`). |
+| `exportar_codev(A, R_pupila)` | Exporta los coeficientes al formato de superficie de CODE V (`.dat`). |
 
 ### `lib.visualizacion`
 

@@ -38,6 +38,15 @@ from .visualizacion import (
     mapa_fase_3d,
 )
 
+from .io import (
+    inicializar_logger,
+    exportar_resultados_csv,
+    cargar_datos_csv,
+    exportar_datos_iniciales_csv,
+    exportar_zemax,
+    exportar_codev,
+)
+
 __all__ = [
     # zernike
     "ResultadoZernike",
@@ -64,4 +73,11 @@ __all__ = [
     # visualizacion
     "graficar_flujo_zernike",
     "mapa_fase_3d",
+    # io
+    "inicializar_logger",
+    "exportar_resultados_csv",
+    "cargar_datos_csv",
+    "exportar_datos_iniciales_csv",
+    "exportar_zemax",
+    "exportar_codev",
 ]

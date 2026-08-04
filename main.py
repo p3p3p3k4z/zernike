@@ -39,7 +39,14 @@ from lib.matriz import (
     imprimir_vector_B,
     descomponer_aberraciones,
 )
-from lib.io import exportar_resultados_csv, cargar_datos_csv, inicializar_logger, exportar_datos_iniciales_csv
+from lib.io import (
+    exportar_resultados_csv,
+    cargar_datos_csv,
+    inicializar_logger,
+    exportar_datos_iniciales_csv,
+    exportar_zemax,
+    exportar_codev,
+)
 
 # Configurar el logger funcional (sin clases/POO) para capturar print()
 inicializar_logger("python_output.txt")
@@ -150,8 +157,18 @@ def seccion_zernike(X_n, Y_n, W_n, nombre_flujo="Cuadrante I"):
     rms = np.sqrt(np.mean(error**2))
     print(f"\nError RMS del ajuste: {rms:.2e}")
 
-    # ---- Exportar a CSV ----
-    exportar_resultados_csv(X_n, Y_n, W_n, resultados.W_fit, error)
+    # ---- Exportación Opcional ----
+    print("\n--- Opciones de Exportacion ---")
+    try:
+        desea_exportar = input("  ¿Deseas exportar los resultados (CSV, Zemax, CODE V)? [s/N]: ").strip().lower()
+    except EOFError:
+        print("  [N] (Omitiendo exportacion automatica)")
+        desea_exportar = "n"
+
+    if desea_exportar in ["s", "si", "y", "yes"]:
+        exportar_resultados_csv(X_n, Y_n, W_n, resultados.W_fit, error)
+        exportar_zemax(A, filepath='output/zemax_zernike.zrn')
+        exportar_codev(A, filepath='output/codev_zernike.dat')
 
     return resultados, X_n, Y_n, W_n
 

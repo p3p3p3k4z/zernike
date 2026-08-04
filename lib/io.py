@@ -84,3 +84,102 @@ def exportar_datos_iniciales_csv(X, Y, Z, filepath='output/datos_iniciales.csv')
         print(f"  Datos iniciales exportados a: {filepath}")
     except Exception as e:
         print(f"  No se pudo exportar los datos iniciales a CSV: {e}")
+
+
+# Mapeo ISO 10110-5 / ANSI Z80.28 de índices (n, m) y descripciones ópticas
+_ZERNIKE_METADATA_ISO = [
+    (0,  0, "Piston"),
+    (1,  1, "Tilt X (Inclinacion X)"),
+    (1, -1, "Tilt Y (Inclinacion Y)"),
+    (2,  2, "Astigmatismo 45 deg"),
+    (2,  0, "Defocus (Desenfoque)"),
+    (2, -2, "Astigmatismo 0 deg"),
+    (3,  3, "Trefoil X"),
+    (3,  1, "Coma X"),
+    (3, -1, "Coma Y"),
+    (3, -3, "Trefoil Y"),
+    (4,  4, "Tetrafoil X"),
+    (4,  2, "Astigmatismo Secundario 45 deg"),
+    (4,  0, "Aberracion Esferica 3er Orden"),
+    (4, -2, "Astigmatismo Secundario 0 deg"),
+    (4, -4, "Tetrafoil Y"),
+    (5,  5, "Pentafoil X"),
+    (5,  3, "Trefoil Secundario X"),
+    (5,  1, "Coma Secundaria X"),
+    (5, -1, "Coma Secundaria Y"),
+    (5, -3, "Trefoil Secundario Y"),
+    (5, -5, "Pentafoil Y"),
+]
+
+
+def exportar_zemax(A, R_pupila=1.0, longitud_onda=0.6328, filepath='output/zemax_zernike.zrn'):
+    """
+    Exporta el vector de coeficientes de Zernike A en el formato estándar de Zemax OpticStudio.
+
+    Parametros
+    ----------
+    A             : ndarray (L,) -- Coeficientes de Zernike (ISO 10110-5)
+    R_pupila      : float        -- Radio de la pupila de normalización en mm
+    longitud_onda : float        -- Longitud de onda de referencia en micras (ej. 0.6328 um)
+    filepath      : str          -- Ruta del archivo de salida (.zrn / .txt)
+    """
+    try:
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        L = len(A)
+
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write("# ========================================================\n")
+            f.write("# ZEMAX OpticStudio - Zernike Surface Coefficients File\n")
+            f.write("# Norma: ISO 10110-5 / ANSI Z80.28\n")
+            f.write("# ========================================================\n")
+            f.write(f"PUPIL_RADIUS_MM      {R_pupila:.6f}\n")
+            f.write(f"WAVELENGTH_UM        {longitud_onda:.6f}\n")
+            f.write(f"NUM_COEFFICIENTS     {L}\n")
+            f.write("# --------------------------------------------------------\n")
+            f.write("# Index   n    m    Coefficient_A           Description\n")
+            f.write("# --------------------------------------------------------\n")
+
+            for r in range(L):
+                if r < len(_ZERNIKE_METADATA_ISO):
+                    n, m, desc = _ZERNIKE_METADATA_ISO[r]
+                else:
+                    n, m, desc = 0, 0, f"Orden Zernike Z_{r+1}"
+                f.write(f"{r+1:5d}   {n:3d}  {m:4d}   {A[r]:+16.8e}   # {desc}\n")
+
+        print(f"  Archivo Zemax OpticStudio exportado a: {filepath}")
+        return True
+    except Exception as e:
+        print(f"  Error al exportar archivo Zemax: {e}")
+        return False
+
+
+def exportar_codev(A, R_pupila=1.0, filepath='output/codev_zernike.dat'):
+    """
+    Exporta el vector de coeficientes de Zernike A en el formato de datos de superficie de CODE V (.dat).
+
+    Parametros
+    ----------
+    A        : ndarray (L,) -- Coeficientes de Zernike (ISO 10110-5)
+    R_pupila : float        -- Radio de apertura / pupila de normalización
+    filepath : str          -- Ruta del archivo de salida (.dat / .txt)
+    """
+    try:
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        L = len(A)
+
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write("! CODE V Zernike Surface Data File\n")
+            f.write(f"! Normalization Radius: {R_pupila:.6f}\n")
+            f.write(f"NRAD {R_pupila:.6f}\n")
+            f.write(f"ZFR {L}\n")
+
+            for r in range(L):
+                desc = _ZERNIKE_METADATA_ISO[r][2] if r < len(_ZERNIKE_METADATA_ISO) else f"Z_{r+1}"
+                f.write(f"C{r+1:<3d} {A[r]:+18.10e} ! {desc}\n")
+
+        print(f"  Archivo CODE V exportado a: {filepath}")
+        return True
+    except Exception as e:
+        print(f"  Error al exportar archivo CODE V: {e}")
+        return False
+
