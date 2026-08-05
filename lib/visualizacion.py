@@ -26,41 +26,29 @@ _COL = {
 }
 
 def generar_eventos(L):
-    """Genera la secuencia exacta de calculos del algoritmo."""
+    """Genera la secuencia exacta de cálculo de la base recursiva de polinomios de Zernike (U, V, D, B)."""
     events = []
     
-    # 1. Evaluar U
+    # 1. Evaluar Base Zernike U
     for r in range(L):
-        events.append({'action': 'add', 'r': r, 'var': 'U', 'deps': [], 'title': f'Base Zernike U_{r}'})
+        events.append({'action': 'add', 'r': r, 'var': 'U', 'deps': [], 'title': f'Base Zernike U_{r+1}'})
         
-    # 2. Gram-Schmidt (V y D intercalados)
-    events.append({'action': 'add', 'r': 0, 'var': 'V', 'deps': [('U', 0)], 'title': 'Gram-Schmidt: V_0 = U_0'})
+    # 2. Ortogonalización Gram-Schmidt (V y D intercalados)
+    events.append({'action': 'add', 'r': 0, 'var': 'V', 'deps': [('U', 0)], 'title': 'Gram-Schmidt: V_1 = U_1'})
     for r in range(1, L):
         deps_D = [('U', r)] + [('V', p) for p in range(r)]
-        events.append({'action': 'add', 'r': r, 'var': 'D', 'deps': deps_D, 'title': f'Gram-Schmidt: D_{r} (Proyeccion)'})
+        events.append({'action': 'add', 'r': r, 'var': 'D', 'deps': deps_D, 'title': f'Gram-Schmidt: D_{r+1} (Proyección Ortogonal)'})
         deps_V = [('U', r), ('D', r)] + [('V', p) for p in range(r)]
-        events.append({'action': 'add', 'r': r, 'var': 'V', 'deps': deps_V, 'title': f'Gram-Schmidt: V_{r} (Ortogonalizacion)'})
+        events.append({'action': 'add', 'r': r, 'var': 'V', 'deps': deps_V, 'title': f'Gram-Schmidt: V_{r+1} (Polinomio Ortogonal)'})
         
-    # 3. Pesos ortogonales B
+    # 3. Pesos de Ajuste B
     for r in range(L):
-        events.append({'action': 'add', 'r': r, 'var': 'B', 'deps': [('V', r)], 'title': f'Pesos B_{r} = <W, V_{r}> / F_{r}'})
-        
-    # 4. Matriz de traduccion C
-    events.append({'action': 'add', 'r': 0, 'var': 'C', 'deps': [], 'title': 'Traduccion C_0'})
-    for r in range(1, L):
-        deps_C = [('D', r)] + [('C', p) for p in range(r)]
-        events.append({'action': 'add', 'r': r, 'var': 'C', 'deps': deps_C, 'title': f'Traduccion Recursiva C_{r}'})
-        
-    # 5. Coeficientes Zernike A (Sustitucion hacia atras)
-    events.append({'action': 'add', 'r': L-1, 'var': 'A', 'deps': [('B', L-1)], 'title': f'Coef. ISO A_{L-1}'})
-    for r in range(L-2, -1, -1):
-        deps_A = [('B', r)] + [('C', i) for i in range(r+1, L)]
-        events.append({'action': 'add', 'r': r, 'var': 'A', 'deps': deps_A, 'title': f'Coef. ISO A_{r}'})
+        events.append({'action': 'add', 'r': r, 'var': 'B', 'deps': [('V', r)], 'title': f'Amplitud de Ajuste B_{r+1} = <W, V_{r+1}> / F_{r+1}'})
         
     return events
 
 
-def graficar_flujo_zernike(resultados, intervalo_ms=180, repetir=True):
+def graficar_flujo_zernike(resultados, intervalo_ms=180, repetir=False):
     """
     Animacion de superposicion de capas de color.
     Incluye flechas de saltos hacia atras/adelante apuntando exactamente
@@ -70,8 +58,8 @@ def graficar_flujo_zernike(resultados, intervalo_ms=180, repetir=True):
     n_fases = len(_VARS)
     capa_h = 1.0
 
-    plt.style.use('default')
     fig, ax = plt.subplots(figsize=(18, 6.5))
+
     fig.patch.set_facecolor('white')
     ax.set_facecolor('white')
     for spine in ax.spines.values():

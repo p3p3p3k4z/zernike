@@ -188,6 +188,8 @@ def seccion_animacion(resultados, X, Y, W_n):
     plt.show()
 
 
+
+
 def seccion_ccd(func_z=None):
     """
     Flujo CCD: genera los 4 cuadrantes con matriz3d_cuadrante,
@@ -363,6 +365,18 @@ def seccion_importar_csv():
 
 
 if __name__ == "__main__":
+    import sys
+    
+    # Soporte para flag de linea de comandos: python main.py --gui o -g
+    if "--gui" in sys.argv or "-g" in sys.argv:
+        from PySide6.QtWidgets import QApplication
+        from gui.main_window import ZernikeZemaxMainWindow
+        
+        app = QApplication(sys.argv)
+        window = ZernikeZemaxMainWindow()
+        window.show()
+        sys.exit(app.exec())
+
     print("\n" + "#"*60)
     print("  LIBRERIA DE POLINOMIOS ORTOGONALES DE ZERNIKE")
     print("  ISO 10110 |  Grado k=5  |  L=21 polinomios")
@@ -383,6 +397,7 @@ if __name__ == "__main__":
     
     if opcion == "2":
         FLUJO = "CSV"
+
     elif opcion == "3":
         FLUJO = "CIRCULO"
     elif opcion == "4":

@@ -31,16 +31,27 @@ El entorno virtual se crea automáticamente en `.venv/`.
 
 ---
 
-## Ejecutar el programa principal
+## 🖥️ Modos de Ejecución (GUI & CLI)
 
+El proyecto soporta **ambos modos de ejecución** de forma nativa e integrada:
+
+### Modo 1: Interfaz Gráfica de Escritorio (GUI Estilo Zemax)
+Puedes lanzarla directamente con cualquiera de estas opciones:
+```bash
+uv run python gui_app.py
+# O también pasando la bandera --gui al archivo principal:
+uv run python main.py --gui
+```
+
+### Modo 2: Consola de Comandos (CLI)
 ```bash
 uv run python main.py
 ```
+Al ejecutar `main.py` sin banderas, la consola interactiva te presentará el siguiente menú (incluyendo la opción `0` para conmutar a la GUI):
 
-El programa principal incluye varios flujos de simulación interactivos (Malla CCD, Importación CSV, Círculo unitario aleatorio, etc.):
-
-| Flujo | Descripción |
+| Opción | Flujo / Descripción |
 |---|---|
+| **0 — GUI** | Inicia la ventana gráfica PySide6 de escritorio estilo Zemax. |
 | **1 — CCD_SENSOR** | Malla simétrica $N \times M$ de píxeles CCD con origen en el centro óptico, filtrada por pupila circular y evaluación matemática configurable. |
 | **2 — CSV** | Carga de datos experimentales desde archivo `.csv` $(X, Y, Z)$. |
 | **3 — CIRCULO** | Generación uniforme de puntos en el círculo unitario ($N=50$). |

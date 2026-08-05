@@ -51,6 +51,9 @@ Si el `assert` evalúa una condición **verdadera** (`True`), la prueba pasa. Si
 - **`test_ajuste_completo_sintetico`**: Ejecuta Gram-Schmidt y valida que la base $V$ sea ortogonal ($\langle V_i, V_j \rangle = 0$) y cumpla las fórmulas ISO 10110-5.
 - **`test_ajuste_completo_polinomio_complejo`**: Evalúa el ajuste sobre la superficie de 3er orden comprobando un error cuadrático medio casi cero ($\text{RMS} < 10^{-5}$).
 
+#### `test_gui.py`
+- **`test_main_window_initialization`**: Comprueba la instanciación de la ventana principal PySide6 (interfaz tipo Zemax OpticStudio) y la presencia de todos sus controles y tablas.
+
 ---
 
 ## comandos para Ejecutar las Pruebas
