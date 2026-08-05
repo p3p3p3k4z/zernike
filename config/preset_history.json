@@ -1,0 +1,11 @@
+{
+  "historial": [
+    "y**2 - x**2"
+  ],
+  "personalizados": [
+    {
+      "nombre": "test",
+      "ecuacion": "y**2 - x**2"
+    }
+  ]
+}

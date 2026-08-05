@@ -228,6 +228,11 @@ class ZernikeZemaxMainWindow(QMainWindow):
         modo = self.panel_parametros.combo_modo.currentIndex()
         eq_str = self.panel_parametros.input_ecuacion.text().strip()
         
+        if modo == 0 and eq_str:
+            from gui.components.preset_manager import PresetStorage
+            PresetStorage().agregar_historial(eq_str)
+
+        
         try:
             N = int(self.panel_parametros.input_N.text())
             M = int(self.panel_parametros.input_M.text())

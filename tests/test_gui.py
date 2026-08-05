@@ -141,5 +141,32 @@ def test_error_residual_3d_dialog(qapp):
     dialog.close()
 
 
+def test_preset_manager_persistence(qapp, tmp_path):
+    """
+    Verifica la persistencia JSON, el almacenamiento del historial y los presets personalizados.
+    """
+    from gui.components.preset_manager import PresetStorage, PresetManagerDialog
+
+    json_file = str(tmp_path / "test_presets.json")
+    storage = PresetStorage(filepath=json_file)
+
+    # 1. Agregar al historial
+    storage.agregar_historial("x**2 + y**2")
+    storage.agregar_historial("3*x*y")
+    assert storage.data["historial"][0] == "3*x*y"
+    assert storage.data["historial"][1] == "x**2 + y**2"
+
+    # 2. Agregar personalizado
+    ok = storage.agregar_personalizado("Prueba Asferica", "x**4 + y**4")
+    assert ok is True
+    assert storage.data["personalizados"][0]["nombre"] == "Prueba Asferica"
+
+    # 3. Instanciar dialogo
+    dialog = PresetManagerDialog(ecuacion_actual="2*x", parent=None)
+    assert dialog is not None
+    dialog.close()
+
+
+
 
 

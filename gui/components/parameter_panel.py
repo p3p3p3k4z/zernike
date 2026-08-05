@@ -69,9 +69,15 @@ class ParameterInputPanel(QWidget):
         layout_ccd.addWidget(self.input_ecuacion)
 
         # Presets de Ecuaciones Rapidas
-        lbl_presets = QLabel("Ecuaciones de prueba rápidas:")
+        lbl_presets = QLabel("Ecuaciones de prueba rapidas:")
         lbl_presets.setStyleSheet("font-size: 11px; color: #64748B;")
         layout_ccd.addWidget(lbl_presets)
+
+        btn_gestor = QPushButton("Gestor de Presets e Historial...")
+        btn_gestor.setObjectName("btn_preset")
+        btn_gestor.setToolTip("Abre el administrador de presets opticos, historial reciente y ecuaciones guardadas.")
+        btn_gestor.clicked.connect(self._abrir_gestor_presets)
+        layout_ccd.addWidget(btn_gestor)
 
         grid_presets = QGridLayout()
         btn_p1 = QPushButton("Astigmatismo (3xy)")
@@ -95,6 +101,7 @@ class ParameterInputPanel(QWidget):
         grid_presets.addWidget(btn_p3, 1, 0)
         grid_presets.addWidget(btn_p4, 1, 1)
         layout_ccd.addLayout(grid_presets)
+
 
         # Dimensiones de la malla
         grid_dim = QGridLayout()
@@ -264,4 +271,18 @@ class ParameterInputPanel(QWidget):
         self.chk_exp_zemax.setChecked(False)
         self.chk_exp_codev.setChecked(False)
         self._validar_inputs()
+
+    def _abrir_gestor_presets(self):
+        """Abre el cuadro de dialogo interactivo del Gestor de Presets e Historial."""
+        from gui.components.preset_manager import PresetManagerDialog
+
+        dlg = PresetManagerDialog(ecuacion_actual=self.input_ecuacion.text(), parent=self)
+        dlg.ecuacion_seleccionada.connect(self._al_seleccionar_preset)
+        dlg.exec()
+
+    def _al_seleccionar_preset(self, ecuacion: str):
+        """Aplica la ecuacion seleccionada en el gestor al campo de texto."""
+        self.input_ecuacion.setText(ecuacion)
+        self._validar_inputs()
+
 
