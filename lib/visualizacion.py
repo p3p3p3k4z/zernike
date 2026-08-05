@@ -244,43 +244,32 @@ def graficar_pupila(
     return fig
 
 
-def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis'):
+def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_scale=1.0, wireframe=False, show_grid=True):
     """
-    Grafica el error residual (Z_exp - Z_fit) en 3D.
-    
-    ¿De dónde sale este Error Residual?
-    -----------------------------------
-    1. Z_exp (Superficie experimental): Son los datos originales ingresados 
-       (provenientes del sensor CCD o archivo CSV).
-    2. Z_fit (Superficie ajustada): Es la superficie idealizada que resulta de la 
-       combinación de los polinomios de Zernike (usando los coeficientes A calculados).
-    
-    Error Residual = Z_exp - Z_fit
-    Calculamos la diferencia punto por punto entre la superficie real y la ajustada.
-
-    ¿Qué representa y cómo interpretarlo?
-    -------------------------------------
-    - Este gráfico 3D es el "ruido" o las deformaciones de alto orden que 
-      nuestro ajuste con Zernike (de grado k=5) NO pudo representar.
-    - Si la superficie es mayormente "plana" y cercana a Z=0, significa que 
-      el modelo de Zernike describió casi perfectamente la lente/espejo.
-    - Si observas picos, valles o patrones muy marcados, significa que la 
-      óptica tiene defectos locales o aberraciones de un grado mayor al que 
-      estamos calculando (mayor a k=5).
+    Grafica la superficie o error residual en 3D.
+    Soporta escalado dinamico del eje Z (z_scale), modo wireframe y conmutacion de cuadrícula.
     """
     from mpl_toolkits.mplot3d import Axes3D
     
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
     
-    surf = ax.plot_trisurf(X_c, Y_c, Z_diff, cmap=cmap, linewidth=0.1, alpha=0.85)
-    
-    fig.colorbar(surf, shrink=0.5, aspect=10, pad=0.1, label='Diferencia de fase')
+    Z_scaled = Z_diff * z_scale
+
+    if wireframe:
+        surf = ax.plot_trisurf(X_c, Y_c, Z_scaled, cmap=cmap, linewidth=0.6, alpha=0.9, edgecolor='grey')
+    else:
+        surf = ax.plot_trisurf(X_c, Y_c, Z_scaled, cmap=cmap, linewidth=0.1, alpha=0.85, edgecolor='none')
+
+
+    fig.colorbar(surf, shrink=0.5, aspect=10, pad=0.1, label='Magnitud Z')
     
     ax.set_title(title)
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
-    ax.set_zlabel('Error')
+    ax.set_zlabel('Amplitud Z')
+    ax.grid(show_grid)
     
     plt.tight_layout()
     return fig
+

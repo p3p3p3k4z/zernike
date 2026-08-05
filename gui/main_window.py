@@ -22,6 +22,8 @@ from PySide6.QtGui import QKeySequence, QAction
 from gui.canvas import MplCanvasWidget
 from gui.styles import obtener_estilo_tema
 from gui.dialogs import mostrar_manual_usuario, mostrar_acerca_de, mostrar_ventana_3d_error_residual
+from gui.zernike_viewer_dialog import ZernikeViewer3DDialog
+
 from gui.components import ParameterInputPanel, SummaryTablesWidget, AppMenuBar, ControlBar3D
 from gui.worker import ZernikeWorker
 
@@ -139,6 +141,18 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.setStyleSheet(css)
         self.summary_tables.aplicar_tema(tema)
 
+        if hasattr(self, '_dialog_visor_3d') and self._dialog_visor_3d is not None and self._dialog_visor_3d.isVisible():
+            self._dialog_visor_3d.setStyleSheet(css)
+            self._dialog_visor_3d._actualizar_grafico_3d()
+
+        if hasattr(self, '_dialog_3d') and self._dialog_3d is not None and self._dialog_3d.isVisible():
+            self._dialog_3d.setStyleSheet(css)
+            self._dialog_3d._actualizar_grafico_3d()
+
+        if hasattr(self, '_redibujar_3d_main'):
+            self._redibujar_3d_main()
+
+
     # =========================================================================
     # MENUS DE LA APLICACION (POO Componente AppMenuBar)
     # =========================================================================
@@ -202,7 +216,11 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.control_bar_3d = ControlBar3D(self)
         self.control_bar_3d.cambio_camara.connect(self._al_cambiar_camara_3d)
         self.control_bar_3d.cambio_colormap.connect(self._al_cambiar_colormap_3d)
+        self.control_bar_3d.cambio_escala_z.connect(lambda val: self._redibujar_3d_main())
+        self.control_bar_3d.cambio_modo_render.connect(lambda mode: self._redibujar_3d_main())
+        self.control_bar_3d.cambio_grid.connect(lambda grid: self._redibujar_3d_main())
         layout_3d.addWidget(self.control_bar_3d)
+
 
         self.canvas_3d = MplCanvasWidget(self)
         layout_3d.addWidget(self.canvas_3d)
@@ -299,18 +317,26 @@ class ZernikeZemaxMainWindow(QMainWindow):
                 self.canvas_3d.canvas.draw_idle()
 
     def _al_cambiar_colormap_3d(self, cmap_name: str):
-        """Redibuja la superficie 3D con el nuevo mapa de colores seleccionado."""
+        """Redibuja la superficie 3D al cambiar el colormap."""
+        self._redibujar_3d_main()
+
+    def _redibujar_3d_main(self):
+        """Metodo de conveniencia para redibujar la vista 3D de la pestaña principal."""
         if self.ultimas_coordenadas is not None and self.ultimo_resultado is not None:
             X_in, Y_in, W_in = self.ultimas_coordenadas
-            self._actualizar_grafica_3d(X_in, Y_in, W_in, self.ultimo_resultado.W_fit, cmap_override=cmap_name)
+            self._actualizar_grafica_3d(X_in, Y_in, W_in, self.ultimo_resultado.W_fit)
+
 
     def _actualizar_grafica_3d(self, X, Y, W_exp, W_fit, cmap_override=None):
-        """Renderiza el mapa tridimensional del error residual respetando la orientación y mapa de colores actual."""
+        """Renderiza el mapa tridimensional del error residual respetando la orientacion y parametros manuales de control."""
         Z_diff = W_exp - W_fit
         cmap_name = cmap_override if cmap_override is not None else self.control_bar_3d.combo_cmap.currentText()
 
         elev = self.control_bar_3d.spin_elev.value()
         azim = self.control_bar_3d.spin_azim.value()
+        z_scale = self.control_bar_3d.spin_escala_z.value()
+        wireframe = self.control_bar_3d.chk_wireframe.isChecked()
+        show_grid = self.control_bar_3d.chk_grid.isChecked()
 
         try:
             if hasattr(self, 'canvas_3d') and hasattr(self.canvas_3d, 'figure') and self.canvas_3d.figure is not None:
@@ -328,11 +354,20 @@ class ZernikeZemaxMainWindow(QMainWindow):
         except Exception:
             pass
 
-        fig = mapa_fase_3d(X, Y, Z_diff, title='Error Residual 3D (Z_exp - Z_fit)', cmap=cmap_name)
+        fig = mapa_fase_3d(
+            X, Y, Z_diff,
+            title='Error Residual 3D (Z_exp - Z_fit)',
+            cmap=cmap_name,
+            z_scale=z_scale,
+            wireframe=wireframe,
+            show_grid=show_grid
+        )
+
         if hasattr(fig, 'axes') and len(fig.axes) > 0 and hasattr(fig.axes[0], 'view_init'):
             fig.axes[0].view_init(elev=elev, azim=azim)
 
         self.canvas_3d.set_figure(fig)
+
 
 
 
@@ -439,6 +474,16 @@ class ZernikeZemaxMainWindow(QMainWindow):
         W_fit = self.ultimo_resultado.W_fit
         self._dialog_3d = mostrar_ventana_3d_error_residual(X_in, Y_in, W_in, W_fit, parent=self)
         self.status_bar.showMessage("Gráfico 3D de Error Residual con panel de controles desplegado en ventana flotante.")
+
+    def _mostrar_visor_polinomios_3d(self):
+        """Abre el visor 3D interactivo para explorar de forma individual los 21 Polinomios de Zernike."""
+        if hasattr(self, '_dialog_visor_3d') and self._dialog_visor_3d is not None and self._dialog_visor_3d.isVisible():
+            self._dialog_visor_3d.close()
+
+        self._dialog_visor_3d = ZernikeViewer3DDialog(resultado_zernike=self.ultimo_resultado, parent=self)
+        self._dialog_visor_3d.show()
+        self.status_bar.showMessage("Visor 3D de Polinomios de Zernike desplegado.")
+
 
 
     def _actualizar_grafica_ccd(self, X_all, Y_all, mascara, R):

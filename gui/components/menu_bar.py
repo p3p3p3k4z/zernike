@@ -74,7 +74,14 @@ class AppMenuBar(QMenuBar):
         act_flujo.triggered.connect(self.controller.lanzar_flujo_completo_zernike)
         menu_herramientas.addAction(act_flujo)
 
+        act_visor_zernike = QAction("Visor 3D de Polinomios de Zernike (21 Polinomios)", self)
+        act_visor_zernike.setShortcut(QKeySequence("Ctrl+Z"))
+        act_visor_zernike.setStatusTip("Explora de forma individual cada uno de los 21 Polinomios de Zernike en 3D")
+        act_visor_zernike.triggered.connect(self.controller._mostrar_visor_polinomios_3d)
+        menu_herramientas.addAction(act_visor_zernike)
+
         menu_herramientas.addSeparator()
+
 
         act_dist_ccd = QAction("Distribución CCD en 4 Cuadrantes", self)
         act_dist_ccd.setStatusTip("Muestra el plano cartesiano de distribución de puntos en 4 cuadrantes")

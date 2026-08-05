@@ -1,86 +1,48 @@
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QPushButton, QMessageBox
 from PySide6.QtCore import Qt
 
-from gui.canvas import MplCanvasWidget
-from gui.components.control_bar_3d import ControlBar3D
+from gui.components.base_3d_dialog import Base3DPlotDialog
 from lib.visualizacion import mapa_fase_3d
 
 
-class ErrorResidual3DDialog(QDialog):
+class ErrorResidual3DDialog(Base3DPlotDialog):
     """
     Ventana flotante modular para visualizar el Error Residual 3D
-    reutilizando ControlBar3D y MplCanvasWidget.
+    heredando de Base3DPlotDialog para compartir todos los controles manuales 3D y tema.
     """
     def __init__(self, X, Y, W_exp, W_fit, parent=None):
-        super().__init__(parent)
         self.X = X
         self.Y = Y
         self.W_exp = W_exp
         self.W_fit = W_fit
         self.Z_diff = W_exp - W_fit
 
-        self.setWindowTitle("Mapa de Error Residual 3D (Z_exp - Z_fit)")
-        self.resize(900, 680)
+        super().__init__(
+            titulo="Mapa de Error Residual 3D (Z_exp - Z_fit)",
+            width=900,
+            height=680,
+            parent=parent
+        )
 
-        if parent is not None and hasattr(parent, 'styleSheet'):
-            self.setStyleSheet(parent.styleSheet())
-
-        self._construir_ui()
         self._actualizar_grafico_3d()
 
-    def _construir_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
+    def _actualizar_grafico_3d(self):
+        cmap_name, elev, azim, z_scale, wireframe, show_grid = self._obtener_parametros_render()
 
-        # 1. Reutilizar ControlBar3D
-        self.control_bar = ControlBar3D(self)
-        self.control_bar.cambio_camara.connect(self._al_cambiar_camara)
-        self.control_bar.cambio_colormap.connect(self._al_cambiar_colormap)
-        layout.addWidget(self.control_bar)
+        fig = mapa_fase_3d(
+            self.X, self.Y, self.Z_diff,
+            title='Error Residual 3D (Z_exp - Z_fit)',
+            cmap=cmap_name,
+            z_scale=z_scale,
+            wireframe=wireframe,
+            show_grid=show_grid
+        )
 
-        # 2. Reutilizar MplCanvasWidget
-        self.canvas = MplCanvasWidget(self)
-        layout.addWidget(self.canvas)
-
-
-    def _actualizar_grafico_3d(self, cmap_override=None):
-        cmap_name = cmap_override if cmap_override is not None else self.control_bar.combo_cmap.currentText()
-
-        elev = self.control_bar.spin_elev.value()
-        azim = self.control_bar.spin_azim.value()
-        try:
-            if hasattr(self, 'canvas') and hasattr(self.canvas, 'figure') and self.canvas.figure is not None:
-                if len(self.canvas.figure.axes) > 0:
-                    ax_prev = self.canvas.figure.axes[0]
-                    if hasattr(ax_prev, 'elev') and ax_prev.elev is not None:
-                        elev = int(ax_prev.elev)
-                        azim = int(ax_prev.azim)
-                        self.control_bar.spin_elev.blockSignals(True)
-                        self.control_bar.spin_azim.blockSignals(True)
-                        self.control_bar.spin_elev.setValue(elev)
-                        self.control_bar.spin_azim.setValue(azim)
-                        self.control_bar.spin_elev.blockSignals(False)
-                        self.control_bar.spin_azim.blockSignals(False)
-        except Exception:
-            pass
-
-        fig = mapa_fase_3d(self.X, self.Y, self.Z_diff, title='Error Residual 3D (Z_exp - Z_fit)', cmap=cmap_name)
         if hasattr(fig, 'axes') and len(fig.axes) > 0 and hasattr(fig.axes[0], 'view_init'):
             fig.axes[0].view_init(elev=elev, azim=azim)
 
         self.canvas.set_figure(fig)
 
-
-
-    def _al_cambiar_camara(self, elev: int, azim: int):
-        if hasattr(self.canvas.figure, 'axes') and len(self.canvas.figure.axes) > 0:
-            ax = self.canvas.figure.axes[0]
-            if hasattr(ax, 'view_init'):
-                ax.view_init(elev=elev, azim=azim)
-                self.canvas.canvas.draw_idle()
-
-    def _al_cambiar_colormap(self, cmap_name: str):
-        self._actualizar_grafico_3d(cmap_override=cmap_name)
 
 
 def mostrar_ventana_3d_error_residual(X, Y, W_exp, W_fit, parent=None):

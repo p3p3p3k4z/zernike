@@ -167,6 +167,58 @@ def test_preset_manager_persistence(qapp, tmp_path):
     dialog.close()
 
 
+def test_zernike_viewer_3d_dialog(qapp):
+    """
+    Verifica que el visor 3D de los 21 Polinomios de Zernike se instancie y navegue correctamente entre r=1 y r=21.
+    """
+    from gui.zernike_viewer_dialog import ZernikeViewer3DDialog
+
+    dialog = ZernikeViewer3DDialog(resultado_zernike=None, parent=None)
+    assert dialog is not None
+    assert dialog.r_actual == 1
+
+    dialog._siguiente_polinomio()
+    assert dialog.r_actual == 2
+
+    dialog._anterior_polinomio()
+    assert dialog.r_actual == 1
+
+    dialog.combo_polinomio.setCurrentIndex(4)  # r=5 Defocus
+    assert dialog.r_actual == 5
+
+    # Probar controles manuales ampliado (Escala Z, Wireframe, Grid)
+    dialog.control_bar.spin_escala_z.setValue(2.0)
+    dialog.control_bar.chk_wireframe.setChecked(True)
+    dialog.control_bar.chk_grid.setChecked(False)
+
+    dialog.close()
+
+
+def test_base_3d_dialog_and_controls(qapp):
+    """
+    Verifica que Base3DPlotDialog administre de forma unificada los controles manuales de escala Z, wireframe y grid.
+    """
+    from gui.components.base_3d_dialog import Base3DPlotDialog
+
+    class TestDialog(Base3DPlotDialog):
+        def __init__(self, parent=None):
+            super().__init__(titulo="Prueba 3D", parent=parent)
+
+        def _actualizar_grafico_3d(self):
+            pass
+
+    dlg = TestDialog()
+    cmap, elev, azim, z_scale, wireframe, show_grid = dlg._obtener_parametros_render()
+    assert z_scale == 1.0
+    assert wireframe is False
+    assert show_grid is True
+
+    dlg.control_bar.restablecer_vista()
+    dlg.close()
+
+
+
+
 
 
 
