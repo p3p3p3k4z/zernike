@@ -268,10 +268,7 @@ def imprimir_vector_B(B):
     for i, b in enumerate(B):
         print(f"  B_{i+1:02d} = {b:+.6f}")
 
-# ============================================================
-# Funciones de simulación CCD
-# ============================================================
-
+# Funciones de simulacion CCD
 def generar_malla_ccd(
     N: int, M: int, func_z=None
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:

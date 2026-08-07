@@ -16,10 +16,6 @@ import numpy as np
 from PIL import Image
 
 
-# =============================================================================
-# FUNCIONES PURAS: PREPROCESAMIENTO & TRANSFORMACIONES
-# =============================================================================
-
 def cargar_y_normalizar_imagen(fuente: Union[str, np.ndarray]) -> np.ndarray:
     """
     Funcion pura que carga una imagen (o matriz) y la convierte a escala de grises
@@ -159,10 +155,6 @@ def extraer_puntos_pupila_circular(fase_unwrapped: np.ndarray, matriz_img: np.nd
 
 
 
-# =============================================================================
-# DEMODULACION DE FASE POR TRANSFORMADA DE FOURIER 2D (MÉTODO DE TAKEDA)
-# =============================================================================
-
 def demodular_fase_fft2d(matriz_img: np.ndarray, radio_filtro_pct: float = 0.15) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Demodula la fase 2D de un interferograma usando el metodo de Fourier (Takeda et al., 1982).
@@ -215,10 +207,6 @@ def demodular_fase_fft2d(matriz_img: np.ndarray, radio_filtro_pct: float = 0.15)
     return fase_enrollada, espectro_log, filtro_gaussiano
 
 
-# =============================================================================
-# DESENVOLVIMIENTO DE FASE 2D (PHASE UNWRAPPING)
-# =============================================================================
-
 def desenvolver_fase_2d(fase_enrollada: np.ndarray) -> np.ndarray:
     """
     Funcion pura que realiza el desenvolvimiento continuo de fase en 2D (Phase Unwrapping)
@@ -238,10 +226,6 @@ def desenvolver_fase_2d(fase_enrollada: np.ndarray) -> np.ndarray:
 
     return fase_desenvolviendo
 
-
-# =============================================================================
-# EXTRACCIÓN DE ESQUELETO & CRESTAS DE FRANJAS
-# =============================================================================
 
 def extraer_esqueleto_franjas(matriz_img: np.ndarray, umbral_pct: float = 0.5) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -276,10 +260,6 @@ def extraer_esqueleto_franjas(matriz_img: np.ndarray, umbral_pct: float = 0.5) -
     return X_pts, Y_pts, Z_pts
 
 
-# =============================================================================
-# GENERADOR FUNCIONAL DE INTERFEROGRAMAS SINTÉTICOS
-# =============================================================================
-
 def generar_interferograma_sintetico(func_z: Callable[[np.ndarray, np.ndarray], np.ndarray] = None,
                                       N: int = 256, franjas_carrier: int = 12) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -310,3 +290,61 @@ def generar_interferograma_sintetico(func_z: Callable[[np.ndarray, np.ndarray], 
     interferograma = aplicar_mascara_circular(interferograma, radio_pct=0.95)
 
     return interferograma, X_grid, Y_grid, Z_fase_teorica
+
+
+def sintetizar_interferograma_desde_zernike(A_coefs: np.ndarray, N: int = 256, franjas_carrier: int = 12, escala_opd: float = 2.0) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Sintetiza un interferograma óptico realista 2D a partir del vector de coeficientes
+    de Zernike A (ISO 10110-5) ajustados.
+
+    Modelado óptico físico:
+    I(x,y) = a(x,y) + b(x,y) * cos( 2*pi * escala_opd * W_fit(x,y) + 2*pi * (fx*X + fy*Y) )
+
+    Retorna:
+    - interferograma: Matriz 2D de intensidad [0, 1]
+    - X_grid: Malla X [-1, 1]
+    - Y_grid: Malla Y [-1, 1]
+    - W_fit_2d: Mapa bidimensional del frente de onda ajustado
+    """
+    from lib.zernike import polinomios_zernike, evaluar_polinomios, reconstruir_W
+
+    x = np.linspace(-1.0, 1.0, N)
+    y = np.linspace(-1.0, 1.0, N)
+    X_grid, Y_grid = np.meshgrid(x, y)
+    X_flat, Y_flat = X_grid.flatten(), Y_grid.flatten()
+
+    polinomios = polinomios_zernike()
+    U = evaluar_polinomios(X_flat, Y_flat, polinomios)
+
+    L = U.shape[0]
+    A_full = np.zeros(L)
+    n_copy = min(len(A_coefs), L)
+    A_full[:n_copy] = A_coefs[:n_copy]
+
+    W_flat = reconstruir_W(A_full, U)
+    W_fit_2d = W_flat.reshape((N, N))
+
+    # Fase de deformación óptica real: phi = 2*pi * escala_opd * W_fit
+    fase_optica = 2.0 * np.pi * escala_opd * W_fit_2d
+
+    # Frecuencia portadora realista (inclinación principal en X e inclinación secundaria en Y)
+    fx = franjas_carrier
+    fy = franjas_carrier * 0.25
+    fase_carrier = 2.0 * np.pi * (fx * X_grid + fy * Y_grid)
+
+    fase_total = fase_optica + fase_carrier
+
+    # Iluminación de fondo gaussiana a(x,y) y contraste b(x,y) de laboratorio óptico
+    R2 = X_grid**2 + Y_grid**2
+    a_fondo = 0.48 + 0.07 * np.exp(-1.5 * R2)
+    b_contraste = 0.42
+
+    interferograma = a_fondo + b_contraste * np.cos(fase_total)
+    interferograma = np.clip(interferograma, 0.0, 1.0)
+
+    # Máscara de pupila circular limpia con supresión de fondo exterior
+    interferograma = aplicar_mascara_circular(interferograma, radio_pct=0.96)
+
+    return interferograma, X_grid, Y_grid, W_fit_2d
+
+

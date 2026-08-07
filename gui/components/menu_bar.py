@@ -95,6 +95,10 @@ class AppMenuBar(QMenuBar):
         act_interferograma.triggered.connect(self.controller._lanzar_procesador_interferogramas)
         menu_herramientas.addAction(act_interferograma)
 
+        act_sintetico = QAction("Sintetizar Interferograma Óptico desde Zernike", self)
+        act_sintetico.setStatusTip("Genera el patrón de interferencia sintético 2D a partir del frente de onda ajustado")
+        act_sintetico.triggered.connect(self.controller._mostrar_interferograma_sintetico)
+        menu_herramientas.addAction(act_sintetico)
 
         # Submenu de Seleccion de Motor de Calculo
         menu_motor = QMenu("Motor de Cálculo Matemático", self)
@@ -116,9 +120,6 @@ class AppMenuBar(QMenuBar):
 
         menu_herramientas.addMenu(menu_motor)
         menu_herramientas.addSeparator()
-
-
-
 
         act_dist_ccd = QAction("Distribución CCD en 4 Cuadrantes", self)
         act_dist_ccd.setStatusTip("Muestra el plano cartesiano de distribución de puntos en 4 cuadrantes")
@@ -145,10 +146,17 @@ class AppMenuBar(QMenuBar):
 
         # --- Menu Ver ---
         menu_ver = self.addMenu("&Ver")
+        act_ver_sintetico = QAction("Ver Interferograma Sintético (Ctrl+I)", self)
+        act_ver_sintetico.setShortcut(QKeySequence("Ctrl+I"))
+        act_ver_sintetico.setStatusTip("Conmuta a la Pestaña 4 con el interferograma sintético")
+        act_ver_sintetico.triggered.connect(self.controller._ir_a_pestana_interferograma_sintetico)
+        menu_ver.addAction(act_ver_sintetico)
+
         act_tema = QAction("Alternar Tema Claro / Oscuro", self)
         act_tema.setShortcut(QKeySequence("Ctrl+T"))
         act_tema.triggered.connect(self.controller._toggle_tema)
         menu_ver.addAction(act_tema)
+
 
         # --- Menu Ayuda ---
         menu_ayuda = self.addMenu("Ayud&a")

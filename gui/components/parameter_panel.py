@@ -11,7 +11,9 @@ Componente reutilizable que encapsula los controles de entrada de parametros:
 """
 
 import os
+import math
 from PySide6.QtWidgets import (
+
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QGroupBox, QLabel, QLineEdit, QComboBox, QPushButton, QCheckBox,
     QFileDialog
@@ -127,8 +129,16 @@ class ParameterInputPanel(QWidget):
         grid_dim.addWidget(self.input_diametro, 2, 1)
 
         layout_ccd.addLayout(grid_dim)
+
+        # Etiqueta informativa dinámica de conteo de píxeles
+        self.lbl_info_puntos_ccd = QLabel()
+        self.lbl_info_puntos_ccd.setWordWrap(True)
+        self.lbl_info_puntos_ccd.setStyleSheet("font-size: 11px; color: #2563EB; font-weight: bold; margin-top: 4px;")
+        layout_ccd.addWidget(self.lbl_info_puntos_ccd)
+
         self.grupo_ccd.setLayout(layout_ccd)
         layout.addWidget(self.grupo_ccd)
+
 
         # --- Grupo 3: Carga CSV ---
         self.grupo_csv = QGroupBox("2. Archivo de Entrada CSV")
@@ -255,6 +265,25 @@ class ParameterInputPanel(QWidget):
             except ValueError:
                 self.input_diametro.setStyleSheet(_STYLE_ERROR)
                 todo_valido = False
+
+            # Cálculo y explicación dinámica de píxeles CCD
+            try:
+                N_val = int(self.input_N.text())
+                M_val = int(self.input_M.text())
+                d_val = float(self.input_diametro.text())
+                total_matriz = N_val * M_val
+                # Estimación geométrica exacta de la pupila circular inscrita
+                radio_pupila = min(d_val / 2.0, min(N_val, M_val) / 2.0)
+                pts_pupila_est = int(math.pi * (radio_pupila ** 2))
+                pts_pupila_est = min(pts_pupila_est, total_matriz)
+                self.lbl_info_puntos_ccd.setText(
+                    f"Matriz Sensor: {N_val}×{M_val} = {total_matriz:,} píxeles\n"
+                    f"Puntos útiles (pupila circular): ~{pts_pupila_est:,} pts"
+                )
+            except ValueError:
+                self.lbl_info_puntos_ccd.setText("Matriz Sensor: Ingrese dimensiones válidas (N, M ≥ 5)")
+
+
 
             self.input_csv_path.setStyleSheet(_STYLE_OK)
             self.input_img_path.setStyleSheet(_STYLE_OK)

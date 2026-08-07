@@ -14,8 +14,9 @@ import matplotlib.pyplot as plt
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QTabWidget, QFileDialog,
-    QMessageBox, QStatusBar, QSplitter, QProgressBar, QLabel
+    QMessageBox, QStatusBar, QSplitter, QProgressBar, QLabel, QToolBar
 )
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence, QAction
 
@@ -29,6 +30,7 @@ from gui.interferogram_dialog import InterferogramProcessorDialog
 
 
 from gui.components import ParameterInputPanel, SummaryTablesWidget, AppMenuBar, ControlBar3D
+
 from gui.worker import ZernikeWorker
 
 from lib.zernike import polinomios_zernike, ajuste_completo
@@ -37,7 +39,11 @@ from lib.matriz import (
     parsear_ecuacion_z, generar_datos_circulo, normalizar_vector
 )
 from lib.io import exportar_resultados_csv, exportar_zemax, exportar_codev, cargar_datos_csv
-from lib.visualizacion import mapa_fase_3d, graficar_flujo_zernike, graficar_pupila, graficar_distribucion_ccd
+from lib.visualizacion import (
+    mapa_fase_3d, graficar_flujo_zernike, graficar_pupila,
+    graficar_distribucion_ccd, graficar_interferograma_sintetico
+)
+
 
 
 class ZernikeZemaxMainWindow(QMainWindow):
@@ -63,6 +69,8 @@ class ZernikeZemaxMainWindow(QMainWindow):
         # Construir Interfaz primero
         self._crear_interfaz_principal()
         self._crear_menu_bar()
+
+
         
         # Barra de Estado (Heuristica 1: Visibilidad del Estado del Sistema)
         self.status_bar = QStatusBar(self)
@@ -176,6 +184,9 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.menu_bar = AppMenuBar(self, controller=self)
         self.setMenuBar(self.menu_bar)
 
+
+
+
     def _abrir_manual(self):
         """Despliega el manual de usuario modal."""
         mostrar_manual_usuario(self)
@@ -217,7 +228,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.setCentralWidget(widget_central)
 
     def _crear_panel_pestanas(self) -> QWidget:
-        """Crea el contenedor con las 3 pestanas principales de visualizacion."""
+        """Crea el contenedor con las 4 pestañas principales de visualización."""
         self.tabs = QTabWidget()
 
         # Tab 1 Modular: Resumen & Aberraciones
@@ -242,11 +253,15 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.control_bar_3d.cambio_grid.connect(lambda grid: self._redibujar_3d_main())
         layout_3d.addWidget(self.control_bar_3d)
 
-
         self.canvas_3d = MplCanvasWidget(self)
         layout_3d.addWidget(self.canvas_3d)
 
         self.tabs.addTab(container_3d, "Error Residual 3D")
+
+        # Tab 4: Interferograma Sintético (2D Canvas)
+        self.canvas_sintetico = MplCanvasWidget(self)
+        self.tabs.addTab(self.canvas_sintetico, "Interferograma Sintético")
+
         self.tabs.currentChanged.connect(self._al_cambiar_pestana_principal)
 
         return self.tabs
@@ -257,6 +272,9 @@ class ZernikeZemaxMainWindow(QMainWindow):
             self.canvas_ccd.canvas.draw_idle()
         elif index == 2 and hasattr(self, 'canvas_3d'):
             self.canvas_3d.canvas.draw_idle()
+        elif index == 3 and hasattr(self, 'canvas_sintetico'):
+            self.canvas_sintetico.canvas.draw_idle()
+
 
 
     # =========================================================================
@@ -358,8 +376,10 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.summary_tables.actualizar_datos(resultados, W_in)
         self._actualizar_grafica_ccd(X_raw_all, Y_raw_all, mask_all, R_pup)
         self._actualizar_grafica_3d(X_in, Y_in, W_in, resultados.W_fit)
+        self._actualizar_grafica_sintetico()
 
         self._procesar_exportaciones(resultados, X_in, Y_in, W_in)
+
 
         self.progress_bar.setValue(100)
         self.lbl_estado_icon.setText("Completado")
@@ -477,6 +497,39 @@ class ZernikeZemaxMainWindow(QMainWindow):
     def _mostrar_animacion_flujo(self):
         """Alias de compatibilidad hacia lanzar_animacion_flujo_zernike."""
         self.lanzar_animacion_flujo_zernike()
+
+    def _actualizar_grafica_sintetico(self):
+        """Renderiza el mapa 2D del interferograma sintético en la Pestaña 4."""
+        if self.ultimo_resultado is None or not hasattr(self, 'canvas_sintetico'):
+            return
+
+        is_dark = (getattr(self, 'tema_actual', 'claro') == 'oscuro')
+        fig = graficar_interferograma_sintetico(
+            A_coefs=self.ultimo_resultado.A,
+            is_dark=is_dark,
+            N=256,
+            franjas_carrier=12
+        )
+        self.canvas_sintetico.set_figure(fig)
+
+
+    def _mostrar_interferograma_sintetico(self):
+        """Muestra la pestaña del interferograma sintético y la actualiza si hay datos de ajuste."""
+        if self.ultimo_resultado is None:
+            QMessageBox.information(
+                self,
+                "Sin Ajuste Disponible",
+                "Primero debes realizar un ajuste de Zernike para sintetizar el interferograma óptico."
+            )
+            return
+        self.tabs.setCurrentIndex(3)
+        self._actualizar_grafica_sintetico()
+        self.status_bar.showMessage("Visualizando el interferograma sintético reconstruido.", 3000)
+
+    def _ir_a_pestana_interferograma_sintetico(self):
+        """Conmuta directamente a la Pestaña 4 (Interferograma Sintético)."""
+        self.tabs.setCurrentIndex(3)
+
 
     def _mostrar_grafica_distribucion_ccd_flotante(self):
         """Abre exclusivamente graficar_distribucion_ccd(X_c, Y_c) en una ventana flotante única."""

@@ -380,4 +380,36 @@ def graficar_fase_continua_y_puntos(fase_continua: np.ndarray, X_pts: np.ndarray
     return fig
 
 
+def graficar_interferograma_sintetico(A_coefs: np.ndarray, is_dark: bool = False, N: int = 256, franjas_carrier: int = 12) -> plt.Figure:
+    """Sintetiza y grafica la imagen 2D del interferograma a partir de los coeficientes A de Zernike."""
+    from lib.interferometria import sintetizar_interferograma_desde_zernike
+
+    interferograma, X_grid, Y_grid, W_fit_2d = sintetizar_interferograma_desde_zernike(
+        A_coefs=A_coefs, N=N, franjas_carrier=franjas_carrier
+    )
+
+    bg_color = '#1e1e2e' if is_dark else '#ffffff'
+    text_color = '#ffffff' if is_dark else '#000000'
+
+    fig, ax = plt.subplots(figsize=(6, 5), facecolor=bg_color)
+    ax.set_facecolor(bg_color)
+
+    im = ax.imshow(interferograma, cmap='gray', extent=[-1, 1, -1, 1], origin='lower')
+    cbar = fig.colorbar(im, ax=ax, shrink=0.85)
+    cbar.ax.yaxis.set_tick_params(color=text_color)
+    plt.setp(plt.getp(cbar.ax, 'yticklabels'), color=text_color)
+    cbar.set_label('Intensidad Norm. I(x,y)', color=text_color)
+
+    ax.set_title("Interferograma Sintético Reconstruido (Zernike)", color=text_color, fontsize=11, fontweight='bold')
+    ax.set_xlabel("X (pupila normalizada)", color=text_color)
+    ax.set_ylabel("Y (pupila normalizada)", color=text_color)
+    ax.tick_params(colors=text_color)
+    for spine in ax.spines.values():
+        spine.set_color(text_color)
+
+    fig.tight_layout()
+    return fig
+
+
+
 

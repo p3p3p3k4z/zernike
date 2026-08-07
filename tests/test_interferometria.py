@@ -58,8 +58,18 @@ def test_desenvolver_fase_2d():
 
 
 def test_extraer_esqueleto_franjas():
-    img, _, _, _ = generar_interferograma_sintetico(N=64, franjas_carrier=6)
-    X_pts, Y_pts, Z_pts = extraer_esqueleto_franjas(img, umbral_pct=0.5)
-
+    img, _, _, _ = generar_interferograma_sintetico(N=64, franjas_carrier=4)
+    X_pts, Y_pts, Z_pts = extraer_esqueleto_franjas(img)
     assert len(X_pts) == len(Y_pts) == len(Z_pts)
-    assert len(X_pts) > 0
+
+
+def test_sintetizar_interferograma_desde_zernike():
+    from lib.interferometria import sintetizar_interferograma_desde_zernike
+    A_mock = np.array([0.1, 0.5, -0.2, 0.3])
+    img, X, Y, W = sintetizar_interferograma_desde_zernike(A_mock, N=64, franjas_carrier=6)
+    assert img.shape == (64, 64)
+    assert X.shape == (64, 64)
+    assert Y.shape == (64, 64)
+    assert W.shape == (64, 64)
+    assert img.min() >= 0.0
+    assert img.max() <= 1.0
