@@ -31,12 +31,14 @@ class ParameterInputPanel(QWidget):
     """
     ejecutar_solicitado = Signal()
     archivo_csv_seleccionado = Signal(str)
+    imagen_interferograma_seleccionada = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._construir_ui()
         self._conectar_validaciones()
         self._validar_inputs()
+
 
     def _construir_ui(self):
         layout = QVBoxLayout(self)
@@ -51,8 +53,10 @@ class ParameterInputPanel(QWidget):
         self.combo_modo.addItems([
             "1. CCD Sensor (Malla NxM simétrica)",
             "2. Archivo CSV Experimental (X, Y, Z)",
-            "3. Círculo Unitario Sintético (N=100)"
+            "3. Círculo Unitario Sintético (N=100)",
+            "4. Imagen de Interferograma (PNG, JPG, BMP)"
         ])
+
         self.combo_modo.setToolTip("Selecciona la fuente de datos para el ajuste de Zernike.")
         self.combo_modo.currentIndexChanged.connect(self._cambio_modo_entrada)
         layout_modo.addWidget(self.combo_modo)
@@ -60,6 +64,8 @@ class ParameterInputPanel(QWidget):
         layout.addWidget(grupo_modo)
 
         # --- Grupo 2: Parametros del Sensor CCD ---
+
+
         self.grupo_ccd = QGroupBox("2. Configuración de Superficie & Sensor")
         layout_ccd = QVBoxLayout()
 
@@ -138,6 +144,42 @@ class ParameterInputPanel(QWidget):
         self.grupo_csv.setVisible(False)
         layout.addWidget(self.grupo_csv)
 
+        # --- Grupo 3.5: Carga Imagen de Interferograma ---
+        self.grupo_interferograma = QGroupBox("2. Imagen de Interferograma")
+        layout_img = QVBoxLayout()
+        
+        layout_path = QHBoxLayout()
+        self.input_img_path = QLineEdit()
+        self.input_img_path.setPlaceholderText("Ruta de imagen (*.png, *.jpg, *.bmp)")
+        btn_examinar_img = QPushButton("Examinar...")
+        btn_examinar_img.setToolTip("Busca una imagen de interferograma en tu computadora")
+        btn_examinar_img.clicked.connect(self._seleccionar_archivo_imagen)
+        layout_path.addWidget(self.input_img_path)
+        layout_path.addWidget(btn_examinar_img)
+        layout_img.addLayout(layout_path)
+
+        self.btn_abrir_procesador_img = QPushButton("Abrir Procesador (Takeda FFT / Esqueleto)")
+        self.btn_abrir_procesador_img.setToolTip("Abre el editor visual para demodular franjas y filtrar espectro 2D")
+        self.btn_abrir_procesador_img.setStyleSheet("font-weight: bold; background-color: #2563EB; color: white;")
+        layout_img.addWidget(self.btn_abrir_procesador_img)
+
+        self.grupo_interferograma.setLayout(layout_img)
+        self.grupo_interferograma.setVisible(False)
+        layout.addWidget(self.grupo_interferograma)
+
+        # --- Grupo 3.8: Círculo Unitario Sintético ---
+        self.grupo_circulo_sintetico = QGroupBox("2. Círculo Unitario Sintético")
+        layout_sint = QHBoxLayout()
+        layout_sint.addWidget(QLabel("Número de Puntos (N):"))
+        self.input_pts_sintetico = QLineEdit("500")
+        self.input_pts_sintetico.setToolTip("Cantidad de puntos aleatorios a generar dentro del círculo unitario [-1, 1], ej. 100, 500, 2000, 5000, 10000.")
+        layout_sint.addWidget(self.input_pts_sintetico)
+        self.grupo_circulo_sintetico.setLayout(layout_sint)
+        self.grupo_circulo_sintetico.setVisible(False)
+        layout.addWidget(self.grupo_circulo_sintetico)
+
+
+
         # --- Grupo 4: Exportacion Opcional ---
         grupo_exp = QGroupBox("3. Archivos de Salida (Opcionales)")
         layout_exp = QVBoxLayout()
@@ -167,6 +209,8 @@ class ParameterInputPanel(QWidget):
         self.input_M.textChanged.connect(self._validar_inputs)
         self.input_diametro.textChanged.connect(self._validar_inputs)
         self.input_csv_path.textChanged.connect(self._validar_inputs)
+        self.input_img_path.textChanged.connect(self._validar_inputs)
+        self.input_pts_sintetico.textChanged.connect(self._validar_inputs)
 
     def _validar_inputs(self):
         """Comprueba la validez de los parámetros y aplica resaltado en rojo para errores."""
@@ -175,9 +219,8 @@ class ParameterInputPanel(QWidget):
 
         if modo == 0:  # CCD Sensor
             # Validar Ecuación
-            eq_str = self.input_ecuacion.text().strip()
-            func_z = parsear_ecuacion_z(eq_str) if eq_str else None
-            if not eq_str or func_z is None:
+            eq = self.input_ecuacion.text().strip()
+            if not eq:
                 self.input_ecuacion.setStyleSheet(_STYLE_ERROR)
                 todo_valido = False
             else:
@@ -214,6 +257,8 @@ class ParameterInputPanel(QWidget):
                 todo_valido = False
 
             self.input_csv_path.setStyleSheet(_STYLE_OK)
+            self.input_img_path.setStyleSheet(_STYLE_OK)
+            self.input_pts_sintetico.setStyleSheet(_STYLE_OK)
 
         elif modo == 1:  # CSV Experimental
             filepath = self.input_csv_path.text().strip()
@@ -227,13 +272,41 @@ class ParameterInputPanel(QWidget):
             self.input_N.setStyleSheet(_STYLE_OK)
             self.input_M.setStyleSheet(_STYLE_OK)
             self.input_diametro.setStyleSheet(_STYLE_OK)
+            self.input_img_path.setStyleSheet(_STYLE_OK)
+            self.input_pts_sintetico.setStyleSheet(_STYLE_OK)
 
-        else:  # Circulo Sintetico
+        elif modo == 3:  # Imagen de Interferograma
+            filepath = self.input_img_path.text().strip()
+            exts = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")
+            if not filepath or not os.path.exists(filepath) or not filepath.lower().endswith(exts):
+                self.input_img_path.setStyleSheet(_STYLE_ERROR)
+                todo_valido = False
+            else:
+                self.input_img_path.setStyleSheet(_STYLE_OK)
+
             self.input_ecuacion.setStyleSheet(_STYLE_OK)
             self.input_N.setStyleSheet(_STYLE_OK)
             self.input_M.setStyleSheet(_STYLE_OK)
             self.input_diametro.setStyleSheet(_STYLE_OK)
             self.input_csv_path.setStyleSheet(_STYLE_OK)
+            self.input_pts_sintetico.setStyleSheet(_STYLE_OK)
+
+        else:  # Circulo Sintetico
+            try:
+                pts = int(self.input_pts_sintetico.text())
+                if pts < 5:
+                    raise ValueError()
+                self.input_pts_sintetico.setStyleSheet(_STYLE_OK)
+            except ValueError:
+                self.input_pts_sintetico.setStyleSheet(_STYLE_ERROR)
+                todo_valido = False
+
+            self.input_ecuacion.setStyleSheet(_STYLE_OK)
+            self.input_N.setStyleSheet(_STYLE_OK)
+            self.input_M.setStyleSheet(_STYLE_OK)
+            self.input_diametro.setStyleSheet(_STYLE_OK)
+            self.input_csv_path.setStyleSheet(_STYLE_OK)
+            self.input_img_path.setStyleSheet(_STYLE_OK)
 
         self.btn_ejecutar.setEnabled(todo_valido)
 
@@ -242,12 +315,23 @@ class ParameterInputPanel(QWidget):
         if index == 0:  # CCD Sensor
             self.grupo_ccd.setVisible(True)
             self.grupo_csv.setVisible(False)
+            self.grupo_circulo_sintetico.setVisible(False)
+            self.grupo_interferograma.setVisible(False)
         elif index == 1:  # CSV
             self.grupo_ccd.setVisible(False)
             self.grupo_csv.setVisible(True)
-        else:  # Circulo
+            self.grupo_circulo_sintetico.setVisible(False)
+            self.grupo_interferograma.setVisible(False)
+        elif index == 2:  # Círculo Sintético
             self.grupo_ccd.setVisible(False)
             self.grupo_csv.setVisible(False)
+            self.grupo_circulo_sintetico.setVisible(True)
+            self.grupo_interferograma.setVisible(False)
+        elif index == 3:  # Imagen de Interferograma
+            self.grupo_ccd.setVisible(False)
+            self.grupo_csv.setVisible(False)
+            self.grupo_circulo_sintetico.setVisible(False)
+            self.grupo_interferograma.setVisible(True)
 
         self._validar_inputs()
 
@@ -258,6 +342,20 @@ class ParameterInputPanel(QWidget):
             self.input_csv_path.setText(filepath)
             self.combo_modo.setCurrentIndex(1)
             self.archivo_csv_seleccionado.emit(filepath)
+
+    def _seleccionar_archivo_imagen(self):
+        """Abre un cuadro de dialogo nativo para seleccionar una imagen de interferograma."""
+        filepath, _ = QFileDialog.getOpenFileName(
+            self, "Seleccionar Imagen de Interferograma", "",
+            "Imágenes (*.png *.jpg *.jpeg *.bmp *.tif *.tiff)"
+        )
+        if filepath:
+            self.input_img_path.setText(filepath)
+            self.combo_modo.setCurrentIndex(3)
+            self._validar_inputs()
+            self.imagen_interferograma_seleccionada.emit(filepath)
+
+
 
     def restablecer_defaults(self):
         """Restablece los campos a su estado por defecto."""
@@ -284,5 +382,8 @@ class ParameterInputPanel(QWidget):
         """Aplica la ecuacion seleccionada en el gestor al campo de texto."""
         self.input_ecuacion.setText(ecuacion)
         self._validar_inputs()
+
+
+
 
 

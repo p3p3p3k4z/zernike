@@ -5,8 +5,9 @@ Componente modular POO que encapsula la barra de menu superior de la aplicacion 
 Organiza los menus Archivo, Herramientas, Ver y Ayuda con acciones independientes.
 """
 
-from PySide6.QtWidgets import QMenuBar
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtWidgets import QMenuBar, QMenu
+from PySide6.QtGui import QAction, QKeySequence, QActionGroup
+
 
 
 class AppMenuBar(QMenuBar):
@@ -33,13 +34,17 @@ class AppMenuBar(QMenuBar):
         act_cargar.triggered.connect(self.controller._seleccionar_archivo_csv)
         menu_archivo.addAction(act_cargar)
 
-        menu_archivo.addSeparator()
+        act_exp_csv = QAction("Exportar Resultados a CSV (.csv)", self)
+        act_exp_csv.setShortcut(QKeySequence("Ctrl+S"))
+        act_exp_csv.setStatusTip("Exporta las coordenadas X, Y, Z esperadas, ajustadas y error residual a un archivo CSV")
+        act_exp_csv.triggered.connect(self.controller._exportar_csv_manual)
+        menu_archivo.addAction(act_exp_csv)
 
         act_exp_zemax = QAction("Exportar a Zemax OpticStudio (.zrn)", self)
-        act_exp_zemax.setShortcut(QKeySequence("Ctrl+S"))
         act_exp_zemax.setStatusTip("Exporta los coeficientes ajustados al formato estándar de Zemax")
         act_exp_zemax.triggered.connect(self.controller._exportar_zemax_manual)
         menu_archivo.addAction(act_exp_zemax)
+
 
         act_exp_codev = QAction("Exportar a CODE V (.dat)", self)
         act_exp_codev.setStatusTip("Exporta los coeficientes ajustados al formato estándar de CODE V")
@@ -80,7 +85,39 @@ class AppMenuBar(QMenuBar):
         act_visor_zernike.triggered.connect(self.controller._mostrar_visor_polinomios_3d)
         menu_herramientas.addAction(act_visor_zernike)
 
+        act_comparar_motores = QAction("Comparar Motores (Python vs. Fortran)", self)
+        act_comparar_motores.setStatusTip("Compara matemáticamente y de forma gráfica los resultados de los motores Python y Fortran")
+        act_comparar_motores.triggered.connect(self.controller._comparar_motores_calculo)
+        menu_herramientas.addAction(act_comparar_motores)
+
+        act_interferograma = QAction("Analizar Imagen de Interferograma (FFT 2D / Takeda)", self)
+        act_interferograma.setStatusTip("Extrae automáticamente el mapa de fase (X, Y, Z) a partir de una imagen de interferograma")
+        act_interferograma.triggered.connect(self.controller._lanzar_procesador_interferogramas)
+        menu_herramientas.addAction(act_interferograma)
+
+
+        # Submenu de Seleccion de Motor de Calculo
+        menu_motor = QMenu("Motor de Cálculo Matemático", self)
+        group_motor = QActionGroup(self)
+        group_motor.setExclusive(True)
+
+        self.act_motor_py = QAction("Python (NumPy / ISO 10110-5, k=5, L=21)", self, checkable=True)
+        self.act_motor_py.setChecked(True)
+        self.act_motor_py.setStatusTip("Usa el motor de Python (NumPy, k=5, 21 polinomios, sin limite de puntos)")
+        self.act_motor_py.triggered.connect(lambda: self.controller._seleccionar_motor_calculo(0))
+        group_motor.addAction(self.act_motor_py)
+        menu_motor.addAction(self.act_motor_py)
+
+        self.act_motor_ft = QAction("Fortran Nativo (Gram-Schmidt, k=4, L=15 - Max 50,000 pts)", self, checkable=True)
+        self.act_motor_ft.setStatusTip("Usa el motor ejecutor en Fortran nativo (Gram-Schmidt, k=4, 15 polinomios)")
+        self.act_motor_ft.triggered.connect(lambda: self.controller._seleccionar_motor_calculo(1))
+        group_motor.addAction(self.act_motor_ft)
+        menu_motor.addAction(self.act_motor_ft)
+
+        menu_herramientas.addMenu(menu_motor)
         menu_herramientas.addSeparator()
+
+
 
 
         act_dist_ccd = QAction("Distribución CCD en 4 Cuadrantes", self)

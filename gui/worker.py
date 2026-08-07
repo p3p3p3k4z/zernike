@@ -9,6 +9,7 @@ import numpy as np
 from PySide6.QtCore import QThread, Signal
 
 from lib.zernike import polinomios_zernike, ajuste_completo
+from lib.fortran_runner import ejecutar_zernike_fortran
 from lib.matriz import (
     generar_malla_ccd, centrar_coordenadas, filtrar_pupila,
     parsear_ecuacion_z, generar_datos_circulo, normalizar_vector
@@ -18,15 +19,16 @@ from lib.io import cargar_datos_csv
 
 class ZernikeWorker(QThread):
     """
-    Worker asíncrono que procesa el filtrado de pupila y la ortogonalización 
-    de Gram-Schmidt en un hilo secundario.
+    Worker asíncrono que procesa el filtrado de pupila y el ajuste de Zernike
+    utilizando el motor numerico en Python (NumPy) o Fortran Nativo.
     """
     progreso_actualizado = Signal(int, str)
     calculo_finalizado = Signal(object, object, object, object, object, object, object, object)
     calculo_error = Signal(str)
 
     def __init__(self, modo: int, eq_str: str = "", N: int = 100, M: int = 100,
-                 diametro: float = 100.0, filepath: str = "", parent=None):
+                 diametro: float = 100.0, filepath: str = "", motor: int = 0,
+                 datos_directos: tuple = None, parent=None):
         super().__init__(parent)
         self.modo = modo
         self.eq_str = eq_str
@@ -34,6 +36,8 @@ class ZernikeWorker(QThread):
         self.M = M
         self.diametro = diametro
         self.filepath = filepath
+        self.motor = motor
+        self.datos_directos = datos_directos
 
     def run(self):
         try:
@@ -41,7 +45,11 @@ class ZernikeWorker(QThread):
             polinomios = polinomios_zernike()
             k = 5
 
-            if self.modo == 0:  # CCD Sensor
+            if self.datos_directos is not None:
+                X_in, Y_in, W_in = self.datos_directos
+                X_raw_all, Y_raw_all, mask_all, R_pup = X_in, Y_in, np.ones(len(X_in), dtype=bool), 1.0
+
+            elif self.modo == 0:  # CCD Sensor
                 if not self.eq_str:
                     raise ValueError("La ecuación Z(x,y) no puede estar vacía.")
                 if self.N < 5 or self.M < 5:
@@ -77,13 +85,19 @@ class ZernikeWorker(QThread):
                 X_raw_all, Y_raw_all, mask_all, R_pup = X_raw, Y_raw, datos_pupila['mascara'], datos_pupila['R']
 
             else:  # Circulo Sintetico
-                X_in, Y_in, W_in = generar_datos_circulo(N=100, semilla=42)
+                n_puntos = self.N if self.N >= 5 else 500
+                X_in, Y_in, W_in = generar_datos_circulo(N=n_puntos, semilla=42)
                 W_in = normalizar_vector(W_in)
                 X_raw_all, Y_raw_all, mask_all, R_pup = X_in, Y_in, np.ones(len(X_in), dtype=bool), 1.0
 
-            self.progreso_actualizado.emit(60, "Calculando base ortogonal mediante Gram-Schmidt...")
 
-            resultados = ajuste_completo(X_in, Y_in, W_in, polinomios, k)
+
+            if self.motor == 1:  # Motor Fortran Nativo
+                self.progreso_actualizado.emit(50, "Ejecutando motor nativo Fortran (Gram-Schmidt)...")
+                resultados = ejecutar_zernike_fortran(X_in, Y_in, W_in)
+            else:  # Motor Python (NumPy)
+                self.progreso_actualizado.emit(60, "Calculando base ortogonal mediante Gram-Schmidt en Python...")
+                resultados = ajuste_completo(X_in, Y_in, W_in, polinomios, k)
 
             self.progreso_actualizado.emit(90, "Finalizando procesamiento de matriz...")
 
@@ -94,3 +108,4 @@ class ZernikeWorker(QThread):
 
         except Exception as e:
             self.calculo_error.emit(str(e))
+

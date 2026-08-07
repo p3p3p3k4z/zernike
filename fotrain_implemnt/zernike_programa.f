@@ -3,7 +3,7 @@ C     ================================================================
 C     DECLARACIONES Y PREPARACION DE DATOS
 C     ================================================================
 
-      DIMENSION X(1000),Y(1000),W(1000)
+      DIMENSION X(50000),Y(50000),W(50000)
       DOUBLE PRECISION SMAX,TE,A(15)
       CHARACTER(LEN=100) :: ARCH
       INTEGER :: IGRADO, IPRINT, N, L, J, I
@@ -31,8 +31,8 @@ C
 C     *** SE OBTIENE EL VALOR MAXIMO DE <X**2 + Y**2> ***
       IF(TE.GT.SMAX) SMAX = TE
       J = J + 1
-      IF(J .GT. 1000) THEN
-         WRITE(*,*) 'ERROR: DEMASIADOS DATOS (MAX 1000)'
+      IF(J .GT. 50000) THEN
+         WRITE(*,*) 'ERROR: DEMASIADOS DATOS (MAX 50000)'
          GO TO 10
       END IF
       GO TO 2
@@ -61,8 +61,8 @@ C     NUCLEO MATEMATICO: SUBRUTINA ZERXY2
 C     ================================================================
       SUBROUTINE ZERXY2(X,Y,W,N,L,LR,IPRINT,A)
 
-      DIMENSION X(1000),Y(1000),W(1000),D(15,15),U(15,1000),
-     * V(15,1000),B(15),WXY(1000),A(15),C(15,15)
+      DIMENSION X(50000),Y(50000),W(50000),D(15,15),U(15,50000),
+     * V(15,50000),B(15),WXY(50000),A(15),C(15,15)
 
       DOUBLE PRECISION U,D,V,SND,SDD,SUM,SNB,SDB,SUMA,
      * ACUM,ACUMA,B,C,A,RMS
@@ -152,8 +152,9 @@ C
       WXY(I)=SNGL(ACUM)
       SUM=SUM + DBLE((W(I)-WXY(I))**2)
       WRITE(LR,65) X(I),Y(I),W(I),WXY(I),W(I)-WXY(I)
-   65 FORMAT(' ',5(F12.6,1X))
+   65 FORMAT(' ',5(1PE16.8,1X))
    50 CONTINUE
+
 
       RMS=DSQRT(SUM/DBLE(FLOAT(N)))
       WRITE(LR,55) RMS

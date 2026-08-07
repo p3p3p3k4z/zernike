@@ -212,13 +212,21 @@ def graficar_pupila(
     """
     fig, ax = plt.subplots(figsize=(6, 6))
 
+    n_tot = len(X_c)
+    if n_tot > 6000:
+        # Muestreo representativo para rendering 2D ultrarrápido
+        idx_render = np.random.choice(n_tot, size=6000, replace=False)
+        X_sub, Y_sub, mask_sub = X_c[idx_render], Y_c[idx_render], mascara[idx_render]
+    else:
+        X_sub, Y_sub, mask_sub = X_c, Y_c, mascara
+
     ax.scatter(
-        X_c[~mascara], Y_c[~mascara],
+        X_sub[~mask_sub], Y_sub[~mask_sub],
         c=_COL['U'], s=14, alpha=0.55, linewidths=0,
         label=f'Fuera  ({(~mascara).sum()})',
     )
     ax.scatter(
-        X_c[mascara], Y_c[mascara],
+        X_sub[mask_sub], Y_sub[mask_sub],
         c=_COL['V'], s=14, alpha=0.85, linewidths=0,
         label=f'Dentro ({mascara.sum()})',
     )
@@ -236,7 +244,7 @@ def graficar_pupila(
     ax.set_title(f'Filtrado por pupila  (R = {R:.1f})', fontsize=12)
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
-    ax.legend(fontsize=9, frameon=True)
+    ax.legend(loc='upper right', fontsize=9, frameon=True)
     ax.set_aspect('equal')
     ax.grid(True, alpha=0.25)
 
@@ -247,7 +255,7 @@ def graficar_pupila(
 def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_scale=1.0, wireframe=False, show_grid=True):
     """
     Grafica la superficie o error residual en 3D.
-    Soporta escalado dinamico del eje Z (z_scale), modo wireframe y conmutacion de cuadrícula.
+    Optimizado con triangulacion espacial eficiente para soportar hasta 50,000 puntos en tiempo real.
     """
     from mpl_toolkits.mplot3d import Axes3D
     
@@ -256,10 +264,18 @@ def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_
     
     Z_scaled = Z_diff * z_scale
 
-    if wireframe:
-        surf = ax.plot_trisurf(X_c, Y_c, Z_scaled, cmap=cmap, linewidth=0.6, alpha=0.9, edgecolor='grey')
+    n_tot = len(X_c)
+    if n_tot > 6000:
+        # Muestreo espacial para triangulacion 3D fluida a 60fps
+        idx_3d = np.random.choice(n_tot, size=6000, replace=False)
+        X_render, Y_render, Z_render = X_c[idx_3d], Y_c[idx_3d], Z_scaled[idx_3d]
     else:
-        surf = ax.plot_trisurf(X_c, Y_c, Z_scaled, cmap=cmap, linewidth=0.1, alpha=0.85, edgecolor='none')
+        X_render, Y_render, Z_render = X_c, Y_c, Z_scaled
+
+    if wireframe:
+        surf = ax.plot_trisurf(X_render, Y_render, Z_render, cmap=cmap, linewidth=0.6, alpha=0.9, edgecolor='grey')
+    else:
+        surf = ax.plot_trisurf(X_render, Y_render, Z_render, cmap=cmap, linewidth=0.1, alpha=0.85, edgecolor='none')
 
 
     fig.colorbar(surf, shrink=0.5, aspect=10, pad=0.1, label='Magnitud Z')
@@ -272,4 +288,96 @@ def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_
     
     plt.tight_layout()
     return fig
+
+
+# =============================================================================
+# FUNCIONES DE VISUALIZACION PARA LAS 4 ETAPAS DE INTERFEROMETRIA
+# =============================================================================
+
+def graficar_interferograma_original(matriz_img: np.ndarray, is_dark: bool = False) -> plt.Figure:
+    """Etapa 1: Grafica la imagen original del interferograma en escala de grises."""
+    bg_color = '#2E3440' if is_dark else '#FFFFFF'
+    text_color = '#ECEFF4' if is_dark else '#0F172A'
+
+    fig, ax = plt.subplots(figsize=(6, 5), facecolor=bg_color)
+    ax.set_facecolor(bg_color)
+    im = ax.imshow(matriz_img, cmap='gray', origin='lower', extent=[-1, 1, -1, 1])
+    ax.set_title("Etapa 1: Interferograma Original", fontsize=11, fontweight='bold', color=text_color)
+    ax.set_xlabel("X (normalizado)", color=text_color)
+    ax.set_ylabel("Y (normalizado)", color=text_color)
+    ax.tick_params(colors=text_color)
+
+    cb = fig.colorbar(im, ax=ax)
+    cb.ax.tick_params(colors=text_color)
+    plt.tight_layout()
+    return fig
+
+
+def graficar_espectro_fft2d(espectro_log: np.ndarray, mascara_filtro: np.ndarray, is_dark: bool = False) -> plt.Figure:
+    """Etapa 2: Grafica el espectro de frecuencias 2D en escala logaritmica con la mascara del filtro."""
+    bg_color = '#2E3440' if is_dark else '#FFFFFF'
+    text_color = '#ECEFF4' if is_dark else '#0F172A'
+
+    fig, ax = plt.subplots(figsize=(6, 5), facecolor=bg_color)
+    ax.set_facecolor(bg_color)
+    im = ax.imshow(espectro_log, cmap='magma', origin='lower')
+    if mascara_filtro is not None:
+        ax.contour(mascara_filtro, levels=[0.5], colors='cyan', linewidths=1.8)
+    ax.set_title("Etapa 2: Espectro FFT 2D y Filtro Pase-Banda", fontsize=11, fontweight='bold', color=text_color)
+    ax.tick_params(colors=text_color)
+
+    cb = fig.colorbar(im, ax=ax)
+    cb.ax.tick_params(colors=text_color)
+    plt.tight_layout()
+    return fig
+
+
+def graficar_fase_enrollada(fase_enrollada: np.ndarray, is_dark: bool = False) -> plt.Figure:
+    """Etapa 3: Grafica la fase enrollada (wrapped phase) en el intervalo [-pi, +pi]."""
+    bg_color = '#2E3440' if is_dark else '#FFFFFF'
+    text_color = '#ECEFF4' if is_dark else '#0F172A'
+
+    fig, ax = plt.subplots(figsize=(6, 5), facecolor=bg_color)
+    ax.set_facecolor(bg_color)
+    im = ax.imshow(fase_enrollada, cmap='twilight', origin='lower', extent=[-1, 1, -1, 1])
+    ax.set_title("Etapa 3: Fase Enrollada [-pi, +pi]", fontsize=11, fontweight='bold', color=text_color)
+    ax.set_xlabel("X", color=text_color)
+    ax.set_ylabel("Y", color=text_color)
+    ax.tick_params(colors=text_color)
+
+    cb = fig.colorbar(im, ax=ax)
+    cb.ax.tick_params(colors=text_color)
+    plt.tight_layout()
+    return fig
+
+
+def graficar_fase_continua_y_puntos(fase_continua: np.ndarray, X_pts: np.ndarray = None, Y_pts: np.ndarray = None, is_dark: bool = False) -> plt.Figure:
+    """Etapa 4: Grafica el mapa de fase continuo (OPD) con la superposicion de los puntos extraidos."""
+    bg_color = '#2E3440' if is_dark else '#FFFFFF'
+    text_color = '#ECEFF4' if is_dark else '#0F172A'
+
+    fig, ax = plt.subplots(figsize=(6, 5), facecolor=bg_color)
+    ax.set_facecolor(bg_color)
+    im = ax.imshow(fase_continua, cmap='viridis', origin='lower', extent=[-1, 1, -1, 1])
+
+    if X_pts is not None and len(X_pts) > 0:
+        idx_sample = np.random.choice(len(X_pts), size=min(1200, len(X_pts)), replace=False)
+        ax.scatter(X_pts[idx_sample], Y_pts[idx_sample], s=3, c='cyan', alpha=0.6, label=f'Puntos Extraídos ({len(X_pts)})')
+        leg = ax.legend(loc='upper right', fontsize=8)
+        if leg:
+            leg.get_frame().set_facecolor(bg_color)
+            for text in leg.get_texts():
+                text.set_color(text_color)
+
+    ax.set_title(f"Etapa 4: Fase Desenvolviendo & Puntos Extraídos", fontsize=11, fontweight='bold', color=text_color)
+    ax.set_xlabel("X", color=text_color)
+    ax.set_ylabel("Y", color=text_color)
+    ax.tick_params(colors=text_color)
+
+    cb = fig.colorbar(im, ax=ax)
+    cb.ax.tick_params(colors=text_color)
+    plt.tight_layout()
+    return fig
+
+
 

@@ -25,8 +25,9 @@ def test_main_window_initialization(qapp):
     window = ZernikeZemaxMainWindow()
     assert window is not None
     assert "Zernike" in window.windowTitle()
-    assert window.combo_modo.count() == 3
+    assert window.combo_modo.count() == 4
     assert window.tabla_coef.rowCount() == 21
+
 
 
 def test_parameter_validation(qapp):

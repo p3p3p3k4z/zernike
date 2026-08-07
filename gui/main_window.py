@@ -23,6 +23,10 @@ from gui.canvas import MplCanvasWidget
 from gui.styles import obtener_estilo_tema
 from gui.dialogs import mostrar_manual_usuario, mostrar_acerca_de, mostrar_ventana_3d_error_residual
 from gui.zernike_viewer_dialog import ZernikeViewer3DDialog
+from gui.engine_comparison_dialog import EngineComparisonDialog
+from gui.interferogram_dialog import InterferogramProcessorDialog
+
+
 
 from gui.components import ParameterInputPanel, SummaryTablesWidget, AppMenuBar, ControlBar3D
 from gui.worker import ZernikeWorker
@@ -52,7 +56,9 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.ultimas_coordenadas = None
         self.animacion_flotante = None  # Referencia para evitar GC de FuncAnimation
         self.tema_actual = "claro"
+        self.motor_actual = 0  # 0: Python, 1: Fortran
         self.worker = None
+
 
         # Construir Interfaz primero
         self._crear_interfaz_principal()
@@ -149,8 +155,17 @@ class ZernikeZemaxMainWindow(QMainWindow):
             self._dialog_3d.setStyleSheet(css)
             self._dialog_3d._actualizar_grafico_3d()
 
+        if hasattr(self, '_dialog_interferograma') and self._dialog_interferograma is not None and self._dialog_interferograma.isVisible():
+            self._dialog_interferograma.setStyleSheet(css)
+            self._dialog_interferograma._procesar_interferograma()
+
+        if hasattr(self, '_dialog_comparacion') and self._dialog_comparacion is not None and self._dialog_comparacion.isVisible():
+            self._dialog_comparacion.setStyleSheet(css)
+            self._dialog_comparacion._ejecutar_comparacion()
+
         if hasattr(self, '_redibujar_3d_main'):
             self._redibujar_3d_main()
+
 
 
     # =========================================================================
@@ -183,7 +198,13 @@ class ZernikeZemaxMainWindow(QMainWindow):
         # Panel Izquierdo Modular: Control de Parametros
         self.panel_parametros = ParameterInputPanel(self)
         self.panel_parametros.ejecutar_solicitado.connect(self._ejecutar_ajuste)
+        self.panel_parametros.imagen_interferograma_seleccionada.connect(self._al_seleccionar_imagen_interferograma)
+        self.panel_parametros.btn_abrir_procesador_img.clicked.connect(self._lanzar_procesador_interferogramas)
+        self.panel_parametros.combo_modo.currentIndexChanged.connect(self._al_cambiar_modo_entrada)
         splitter.addWidget(self.panel_parametros)
+
+
+
 
         # Panel Derecho Modular: Pestanas de Resultados y Lienzos
         panel_derecho = self._crear_panel_pestanas()
@@ -251,11 +272,19 @@ class ZernikeZemaxMainWindow(QMainWindow):
             PresetStorage().agregar_historial(eq_str)
 
         
-        try:
-            N = int(self.panel_parametros.input_N.text())
-            M = int(self.panel_parametros.input_M.text())
-        except ValueError:
-            N, M = 100, 100
+        if modo == 2:
+            try:
+                N = int(self.panel_parametros.input_pts_sintetico.text())
+                M = N
+            except ValueError:
+                N, M = 500, 500
+        else:
+            try:
+                N = int(self.panel_parametros.input_N.text())
+                M = int(self.panel_parametros.input_M.text())
+            except ValueError:
+                N, M = 100, 100
+
 
         try:
             diametro = float(self.panel_parametros.input_diametro.text())
@@ -263,18 +292,48 @@ class ZernikeZemaxMainWindow(QMainWindow):
             diametro = 100.0
 
         filepath = self.panel_parametros.input_csv_path.text().strip()
+        img_filepath = self.panel_parametros.input_img_path.text().strip()
+        motor = self.motor_actual
+
+        datos_directos = None
+        if modo == 3:
+            datos_directos = getattr(self, 'datos_interferograma_cargados', None)
+            if datos_directos is None and img_filepath:
+                from lib.interferometria import (
+                    cargar_y_normalizar_imagen, recortar_y_limpiar_interferograma,
+                    demodular_fase_fft2d, desenvolver_fase_2d, extraer_puntos_pupila_circular
+                )
+                img_mat = cargar_y_normalizar_imagen(img_filepath)
+                img_mat, _ = recortar_y_limpiar_interferograma(img_mat, umbral_fondo=0.06)
+                fase_wrap, _, _ = demodular_fase_fft2d(img_mat)
+                fase_unwrapped = desenvolver_fase_2d(fase_wrap)
+
+                X_val, Y_val, Z_val, _ = extraer_puntos_pupila_circular(fase_unwrapped, img_mat, radio_pct=0.96)
+                datos_directos = (X_val, Y_val, Z_val)
+
+
+
+
 
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(10)
         self.lbl_estado_icon.setText("Calculando...")
         self.panel_parametros.btn_ejecutar.setEnabled(False)
-        self.status_bar.showMessage("Iniciando cálculo de Zernike en segundo plano (QThread)...")
+        self.status_bar.showMessage(f"Iniciando cálculo con motor ({'Fortran' if motor == 1 else 'Python'})...")
 
-        self.worker = ZernikeWorker(modo, eq_str, N, M, diametro, filepath, self)
+        self.worker = ZernikeWorker(modo, eq_str, N, M, diametro, filepath, motor, datos_directos, self)
+
         self.worker.progreso_actualizado.connect(self._al_progreso_worker)
         self.worker.calculo_finalizado.connect(self._al_finalizar_worker)
         self.worker.calculo_error.connect(self._al_error_worker)
         self.worker.start()
+
+    def _seleccionar_motor_calculo(self, motor: int):
+        """Cambia el motor numerico activo (0: Python NumPy, 1: Fortran Nativo)."""
+        self.motor_actual = motor
+        nombre_motor = "Fortran Nativo (Gram-Schmidt, k=4)" if motor == 1 else "Python (NumPy, k=5, ISO 10110-5)"
+        self.status_bar.showMessage(f"Motor de cálculo activo cambiado a: {nombre_motor}", 4000)
+
 
     def _al_progreso_worker(self, val: int, msg: str):
         self.progress_bar.setValue(val)
@@ -484,12 +543,96 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self._dialog_visor_3d.show()
         self.status_bar.showMessage("Visor 3D de Polinomios de Zernike desplegado.")
 
+    def _comparar_motores_calculo(self):
+        """Abre el cuadro de dialogo comparativo entre el motor de Python (NumPy) y Fortran Nativo."""
+        if self.ultimas_coordenadas is None:
+            QMessageBox.information(
+                self,
+                "Sin Datos para Comparación",
+                "Primero debes hacer clic en 'EJECUTAR AJUSTE DE ZERNIKE' para cargar o calcular las coordenadas."
+            )
+            return
 
+        if hasattr(self, '_dialog_comparacion') and self._dialog_comparacion is not None and self._dialog_comparacion.isVisible():
+            self._dialog_comparacion.close()
+
+        X_in, Y_in, W_in = self.ultimas_coordenadas
+        self._dialog_comparacion = EngineComparisonDialog(X_in, Y_in, W_in, parent=self)
+        self._dialog_comparacion.show()
+        self.status_bar.showMessage("Comparador de Motores (Python vs. Fortran) desplegado.")
+
+    def _al_seleccionar_imagen_interferograma(self, filepath: str):
+        """Muestra inmediatamente la previsualización del interferograma en Tab 2 (Malla CCD & Pupila)."""
+        if not filepath or not os.path.exists(filepath):
+            return
+
+        from lib.interferometria import cargar_y_normalizar_imagen, recortar_y_limpiar_interferograma
+        from lib.visualizacion import graficar_interferograma_original
+
+        try:
+            img_mat = cargar_y_normalizar_imagen(filepath)
+            img_limpia, _ = recortar_y_limpiar_interferograma(img_mat, umbral_fondo=0.06)
+            is_dark = (self.tema_actual == 'oscuro')
+            fig = graficar_interferograma_original(img_limpia, is_dark=is_dark)
+
+            self.canvas_ccd.set_figure(fig)
+            self.tabs.setCurrentIndex(1)  # Pestaña Malla CCD & Pupila
+            self.status_bar.showMessage(f"Previsualización inmediata cargada: {os.path.basename(filepath)}", 5000)
+        except Exception as e:
+            self.status_bar.showMessage(f"No se pudo previsualizar la imagen: {str(e)}", 4000)
+
+    def _al_cambiar_modo_entrada(self, index: int):
+        """Limpia datos acumulados en memoria al conmutar entre modos de entrada."""
+        self.datos_interferograma_cargados = None
+        if index != 3:
+            self.panel_parametros.input_img_path.clear()
+        self.status_bar.showMessage("Modo de entrada cambiado. Datos anteriores de interferograma reseteados.", 3000)
+
+
+    def _lanzar_procesador_interferogramas(self):
+
+        """Abre la ventana interactiva de demodulación de interferogramas en imagen."""
+        if hasattr(self, '_dialog_interferograma') and self._dialog_interferograma is not None and self._dialog_interferograma.isVisible():
+            self._dialog_interferograma.close()
+
+        self._dialog_interferograma = InterferogramProcessorDialog(parent=self)
+        self._dialog_interferograma.puntos_extraidos_signal.connect(self._procesar_puntos_interferograma_importados)
+        self._dialog_interferograma.show()
+        self.status_bar.showMessage("Procesador de Interferogramas (Takeda 2D / Esqueleto) desplegado.")
+
+    def _procesar_puntos_interferograma_importados(self, X_in, Y_in, W_in):
+        """Recibe los puntos (X,Y,Z) extraídos del procesador y los prepara para la ejecución desde la ventana principal."""
+        self.datos_interferograma_cargados = (X_in, Y_in, W_in)
+        self.panel_parametros.combo_modo.setCurrentIndex(3)  # Imagen de Interferograma
+        self.status_bar.showMessage(
+            f"Se cargaron {len(X_in)} puntos del interferograma. Haz clic en 'EJECUTAR AJUSTE DE ZERNIKE (Ctrl+E)' para iniciar.",
+            6000
+        )
+        QMessageBox.information(
+            self,
+            "Puntos Listos",
+            f"Se han cargado {len(X_in)} puntos en el panel principal.\n\n"
+            "Haz clic en el botón 'EJECUTAR AJUSTE DE ZERNIKE (Ctrl+E)' en la ventana principal para realizar la simulación."
+        )
 
     def _actualizar_grafica_ccd(self, X_all, Y_all, mascara, R):
-        """Usa graficar_pupila() de lib.visualizacion para renderizar la distribucion CCD en la interfaz."""
-        fig = graficar_pupila(X_all, Y_all, mascara, R)
+        """Usa graficar_pupila() o renderiza la imagen importada de interferograma en la pestaña CCD & Pupila."""
+        modo = self.panel_parametros.combo_modo.currentIndex()
+        img_filepath = self.panel_parametros.input_img_path.text().strip()
+
+        if modo == 3 and img_filepath and os.path.exists(img_filepath):
+            from lib.interferometria import cargar_y_normalizar_imagen, recortar_y_limpiar_interferograma
+            from lib.visualizacion import graficar_interferograma_original
+            is_dark = (self.tema_actual == 'oscuro')
+            img_mat = cargar_y_normalizar_imagen(img_filepath)
+            img_mat, _ = recortar_y_limpiar_interferograma(img_mat, umbral_fondo=0.06)
+            fig = graficar_interferograma_original(img_mat, is_dark=is_dark)
+        else:
+            fig = graficar_pupila(X_all, Y_all, mascara, R)
+
         self.canvas_ccd.set_figure(fig)
+
+
 
 
     def _procesar_exportaciones(self, resultados, X, Y, W):
@@ -503,6 +646,20 @@ class ZernikeZemaxMainWindow(QMainWindow):
             exportar_zemax(A, filepath='output/zemax_zernike.zrn')
         if self.panel_parametros.chk_exp_codev.isChecked():
             exportar_codev(A, filepath='output/codev_zernike.dat')
+
+    def _exportar_csv_manual(self):
+        """Dialogo de exportacion manual a CSV de resultados."""
+        if self.ultimo_resultado is None or self.ultimas_coordenadas is None:
+            QMessageBox.warning(self, "Sin Ajuste", "Primero debes ejecutar un ajuste de Zernike.")
+            return
+        filepath, _ = QFileDialog.getSaveFileName(self, "Exportar Resultados a CSV", "output/zernike_resultados.csv", "Archivos CSV (*.csv)")
+        if filepath:
+            X_in, Y_in, W_in = self.ultimas_coordenadas
+            error = W_in - self.ultimo_resultado.W_fit
+            from lib.io import exportar_resultados_csv
+            exportar_resultados_csv(X_in, Y_in, W_in, self.ultimo_resultado.W_fit, error, filepath=filepath)
+            QMessageBox.information(self, "Exportación Exitosa", f"Archivo CSV de resultados guardado en:\n{filepath}")
+
 
     def _exportar_zemax_manual(self):
         """Dialogo de exportacion manual a Zemax."""
