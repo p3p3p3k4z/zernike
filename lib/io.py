@@ -5,11 +5,18 @@ import logging
 
 logger = logging.getLogger("zernike")
 
-def inicializar_logger(filename="python_output.txt"):
+def _asegurar_directorio(filepath: str):
+    """Crea la estructura de carpetas contenedora si filepath contiene una ruta de directorio."""
+    dirname = os.path.dirname(filepath)
+    if dirname:
+        os.makedirs(dirname, exist_ok=True)
+
+
+def inicializar_logger(filename="output/zernike_app.log"):
     """
     Inicializa el sistema de logging estándar de Python, configurando
-    la salida tanto a consola como a un archivo, sin sobrescribir
-    builtins.print globalmente.
+    la salida tanto a consola como a un archivo en la carpeta output/,
+    sin sobrescribir builtins.print globalmente.
     """
     logger.setLevel(logging.INFO)
     
@@ -22,6 +29,7 @@ def inicializar_logger(filename="python_output.txt"):
     c_handler.setLevel(logging.INFO)
     
     # Handler para archivo
+    _asegurar_directorio(filename)
     f_handler = logging.FileHandler(filename, mode="w", encoding="utf-8")
     f_handler.setLevel(logging.INFO)
 
@@ -41,7 +49,7 @@ def exportar_resultados_csv(X, Y, Z_exp, Z_fit, error, filepath='output/zernike_
     Exporta los resultados del ajuste de Zernike a un archivo CSV.
     """
     try:
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        _asegurar_directorio(filepath)
         df_export = pd.DataFrame({
             'X': X,
             'Y': Y,
@@ -51,7 +59,7 @@ def exportar_resultados_csv(X, Y, Z_exp, Z_fit, error, filepath='output/zernike_
         })
         df_export.to_csv(filepath, index=False)
         print(f"  Resultados exportados a: {filepath}")
-    except Exception as e:
+    except (OSError, ValueError, KeyError) as e:
         print(f"  No se pudo exportar a CSV: {e}")
 
 def cargar_datos_csv(filepath):
@@ -65,7 +73,7 @@ def cargar_datos_csv(filepath):
             print("  ERROR: El CSV debe contener las columnas 'X', 'Y', 'Z'.")
             return None, None, None
         return df['X'].values, df['Y'].values, df['Z'].values
-    except Exception as e:
+    except (OSError, ValueError, KeyError, pd.errors.EmptyDataError) as e:
         print(f"  Error al leer el CSV: {e}")
         return None, None, None
 
@@ -74,7 +82,7 @@ def exportar_datos_iniciales_csv(X, Y, Z, filepath='output/datos_iniciales.csv')
     Exporta los datos (X, Y, Z) iniciales generados a un archivo CSV.
     """
     try:
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        _asegurar_directorio(filepath)
         df_export = pd.DataFrame({
             'X': X,
             'Y': Y,
@@ -82,8 +90,9 @@ def exportar_datos_iniciales_csv(X, Y, Z, filepath='output/datos_iniciales.csv')
         })
         df_export.to_csv(filepath, index=False)
         print(f"  Datos iniciales exportados a: {filepath}")
-    except Exception as e:
+    except (OSError, ValueError, KeyError) as e:
         print(f"  No se pudo exportar los datos iniciales a CSV: {e}")
+
 
 
 # Mapeo ISO 10110-5 / ANSI Z80.28 de índices (n, m) y descripciones ópticas
@@ -124,7 +133,7 @@ def exportar_zemax(A, R_pupila=1.0, longitud_onda=0.6328, filepath='output/zemax
     filepath      : str          -- Ruta del archivo de salida (.zrn / .txt)
     """
     try:
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        _asegurar_directorio(filepath)
         L = len(A)
 
         with open(filepath, 'w', encoding='utf-8') as f:
@@ -164,7 +173,7 @@ def exportar_codev(A, R_pupila=1.0, filepath='output/codev_zernike.dat'):
     filepath : str          -- Ruta del archivo de salida (.dat / .txt)
     """
     try:
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        _asegurar_directorio(filepath)
         L = len(A)
 
         with open(filepath, 'w', encoding='utf-8') as f:
@@ -182,4 +191,5 @@ def exportar_codev(A, R_pupila=1.0, filepath='output/codev_zernike.dat'):
     except Exception as e:
         print(f"  Error al exportar archivo CODE V: {e}")
         return False
+
 
