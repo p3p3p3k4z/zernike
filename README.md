@@ -48,6 +48,9 @@ El entorno virtual se crea automáticamente en `.venv/`.
 
 El proyecto soporta **ambos modos de ejecución** de forma nativa e integrada:
 
+*(Consulta el **[Manual Técnico de la Interfaz Gráfica](docs/manual_interfaz_gui.md)** para la especificación detallada de cada menú, tabla de aberraciones y panel de control).*
+
+
 ### Modo 1: Interfaz Gráfica de Escritorio (GUI Estilo Zemax)
 Puedes lanzarla directamente con cualquiera de estas opciones:
 ```bash
