@@ -119,11 +119,12 @@ def crear_paquete_rpm():
     # Intentar con alien
     if shutil.which("alien"):
         try:
-            subprocess.run(["alien", "--to-rpm", deb_path], check=True)
+            deb_filename = f"{DEB_DIR_NAME}.deb"
+            subprocess.run(["alien", "--to-rpm", deb_filename], cwd="dist", check=True)
             print("ÉXITO: Convertido a RPM mediante alien.")
             return
-        except subprocess.CalledProcessError:
-            pass
+        except subprocess.CalledProcessError as err:
+            print(f"Error al ejecutar alien: {err}")
 
     print(f"Info: Para generar el ejecutable .rpm en Fedora/RHEL, se utiliza la GitHub Action automatizada.")
 
