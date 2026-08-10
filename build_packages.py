@@ -139,7 +139,15 @@ def crear_paquete_rpm():
         try:
             deb_filename = f"{DEB_DIR_NAME}.deb"
             subprocess.run(["alien", "--to-rpm", deb_filename], cwd="dist", check=True)
-            print("ÉXITO: Convertido a RPM mediante alien.")
+            # Normalizar nombre generado por alien (ej. zernike-gui-1.0.0-2.x86_64.rpm -> zernike-gui-1.0.0-1.x86_64.rpm)
+            for f_name in os.listdir("dist"):
+                if f_name.endswith(".rpm") and f_name != os.path.basename(output_rpm):
+                    generated_path = os.path.join("dist", f_name)
+                    if os.path.exists(output_rpm):
+                        os.remove(output_rpm)
+                    shutil.move(generated_path, output_rpm)
+                    break
+            print(f"ÉXITO: Convertido a RPM mediante alien ({output_rpm}).")
             return
         except subprocess.CalledProcessError as err:
             print(f"Error al ejecutar alien: {err}")

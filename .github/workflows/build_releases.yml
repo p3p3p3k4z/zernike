@@ -105,6 +105,25 @@ jobs:
           name: zernike-gui-linux
           path: dist
 
+      - name: Generate SHA-256 Checksums
+        run: |
+          cd dist
+          sha256sum zernike-gui zernike-gui.exe *.deb *.rpm > SHA256SUMS.txt
+          echo "--- Sumas de verificación SHA-256 ---"
+          cat SHA256SUMS.txt
+
+      - name: Check if Prerelease
+        id: check_prerelease
+        run: |
+          TAG="${{ inputs.tag_name || github.ref_name }}"
+          if [[ "$TAG" =~ -(rc|beta|alpha|dev) ]]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+            echo "Identificada versión preliminar (Prerelease): $TAG"
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+            echo "Identificada versión estable (Release): $TAG"
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -113,19 +132,43 @@ jobs:
           body: |
             ## Paquetes Binarios Precompilados (Zernike GUI)
             
-            Descarga directamente el ejecutable o instalador correspondiente a tu sistema operativo:
+            Descarga e instala el paquete correspondiente a tu sistema operativo:
             
-            - **Windows 10/11**: `zernike-gui.exe` (Ejecutable portátil de 64 bits)
-            - **Debian / Ubuntu / Linux Mint**: `zernike-gui_1.0.0_amd64.deb` (`sudo dpkg -i ...`)
-            - **Fedora / RHEL / CentOS**: `zernike-gui-1.0.0-1.x86_64.rpm` (`sudo dnf install ...`)
-            - **Linux (Binario Genérico ELF)**: `zernike-gui`
+            ### Windows 10 / 11
+            Descarga **`zernike-gui.exe`** y ejecútalo directamente (ejecutable portátil de 64 bits, no requiere instalación).
+            
+            ### Debian / Ubuntu / Linux Mint (`.deb`)
+            ```bash
+            sudo dpkg -i zernike-gui_1.0.0_amd64.deb
+            ```
+            
+            ### Fedora / RHEL / CentOS / AlmaLinux (`.rpm`)
+            ```bash
+            sudo dnf install ./zernike-gui-1.0.0-1.x86_64.rpm
+            ```
+            
+            ### Linux Binario Genérico (Cualquier distribución Linux)
+            ```bash
+            chmod +x zernike-gui
+            ./zernike-gui
+            ```
+            
+            ---
+            ### Verificación de Integridad (SHA-256)
+            Puedes verificar las sumas de verificación de cualquier archivo descargado ejecutando:
+            ```bash
+            sha256sum -c SHA256SUMS.txt
+            ```
+          generate_release_notes: true
           files: |
             dist/zernike-gui.exe
             dist/zernike-gui
             dist/*.deb
             dist/*.rpm
+            dist/SHA256SUMS.txt
+          overwrite: true
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.check_prerelease.outputs.prerelease == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
