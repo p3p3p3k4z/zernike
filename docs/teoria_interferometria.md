@@ -198,18 +198,37 @@ Se evalúa la matriz ortogonal de Zernike $\mathbf{Z}$ y se resuelven los coefic
 * **Motor Python**: Descomposición QR / SVD en NumPy con norma de ortogonalidad $k=5$.
 * **Motor Fortran Nativo**: Re-ortogonalización rápida de Gram-Schmidt binaria con $k=4$.
 
-$$\mathbf{A} = (\mathbf{Z}^T \mathbf{Z})^{-1} \mathbf{Z}^T \mathbf{W}$$
+$$A = (Z^T Z)^{-1} Z^T W$$
 
 ---
 
-## 5. Fuentes de Información y Referencias Académicas
+## 5. Síntesis del Interferograma Óptico Sintético desde Zernike
+
+Para simular la captura de laboratorio de una superficie evaluada y verificar visualmente la reconstrucción del frente de onda, el sistema implementa la simulación directa (*Forward Optical Modeling*)
+
+### Ecuación Directa de Intensidad
+A partir del mapa de frente de onda reconstruido $W_{\text{fit}}(x,y) = \sum A_j Z_j(x,y)$, la intensidad luminosa bidimensional $I(x,y)$ se modela como:
+
+$$I(x,y) = \text{clip}\Big( a(x,y) + b(x,y) \cos\big( \phi_{\text{óptica}}(x,y) + \phi_{\text{portadora}}(x,y) \big), \, 0.0, \, 1.0 \Big)$$
+
+Donde:
+* **Fase Óptica Real**: $\phi_{\text{óptica}}(x,y) = 2\pi \cdot \text{escala\_opd} \cdot W_{\text{fit}}(x,y)$, escala la diferencia de camino óptico (OPD) en múltiplos de la longitud de onda.
+* **Portadora Espacial Inclinada**: $\phi_{\text{portadora}}(x,y) = 2\pi (f_x X + f_y Y)$, introduce las franjas de inclinación de referencia con frecuencia $f_x = 12$ y $f_y = 3$.
+* **Iluminación Gaussiana de Fondo**: $a(x,y) = 0.48 + 0.07 \cdot \exp(-1.5 (X^2 + Y^2))$, imita el perfil de haz de láser He-Ne de laboratorio.
+* **Modulación de Contraste**: $b(x,y) = 0.42$, fija la visibilidad de las franjas dentro del rango dinámico $[0, 1]$.
+* **Enmascaramiento Pupilar**: Supresión limpia del fondo fuera del disco circular $\rho = \sqrt{x^2+y^2} \le 0.96$.
+
+---
+
+## 6. Fuentes de Información y Referencias Académicas
 
 Las siguientes referencias constituyen el fundamento científico e industrial utilizado en esta implementación:
 
 1. **Takeda, M., Ina, H., & Kobayashi, S. (1982)**. *Fourier-transform method of fringe-pattern analysis for computer-based topography and interferometry*. **Journal of the Optical Society of America / Applied Optics**, 21(8), 1332–1338.
-   * *Articulo seminal original que introdujo el método de demodulación 2D por FFT.*
+   * *Artículo seminal original que introdujo el método de demodulación 2D por FFT.*
 
 2. **Malacara, D. (2007)**. *Optical Shop Testing* (3rd ed.). John Wiley & Sons.
+   * *Capítulo 13: Zernike Polynomials and Wavefront Fitting.*
    * *Capítulo 14: Phase Shifting and Fourier Transform Interferometry.*
 
 3. **Ghiglia, D. C., & Pritt, M. D. (1998)**. *Two-Dimensional Phase Unwrapping: Theory, Algorithms, and Software*. John Wiley & Sons.
@@ -220,3 +239,4 @@ Las siguientes referencias constituyen el fundamento científico e industrial ut
 
 5. **ISO 10110-5:2015 / ANSI Z80.28-2017**. *Optics and photonics — Preparation of drawings for optical elements and systems — Part 5: Surface form tolerances*.
    * *Norma internacional que define la convención estándar de representación de aberraciones y polinomios de Zernike.*
+

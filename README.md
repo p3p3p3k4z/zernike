@@ -4,7 +4,20 @@ Miniprograma para el ajuste de superficies ópticas mediante **polinomios ortogo
 
 ---
 
-## Requisitos
+## Descargas Directas de Ejecutables e Instaladores (Releases)
+
+Puedes descargar los paquetes binarios precompilados de la aplicación gráfica directamente desde las **[Publicaciones del Repositorio (GitHub Releases)](../../releases)**:
+
+| Sistema Operativo / Formato | Archivo de Descarga | Comando de Instalación / Ejecución |
+|---|---|---|
+| **Windows 10/11 (64-bit)** | `zernike-gui.exe` | Ejecutable standalone portable (doble clic) |
+| **Debian / Ubuntu / Mint** | `zernike-gui_1.0.0_amd64.deb` | `sudo dpkg -i zernike-gui_1.0.0_amd64.deb` |
+| **Fedora / RHEL / CentOS** | `zernike-gui-1.0.0-1.x86_64.rpm` | `sudo dnf install zernike-gui-1.0.0-1.x86_64.rpm` |
+| **Linux (Binario Genérico)** | `zernike-gui` | `chmod +x zernike-gui && ./zernike-gui` |
+
+---
+
+## Requisitos para Desarrollo
 
 - [uv](https://docs.astral.sh/uv/) ≥ 0.5  
 - Python ≥ 3.10
@@ -31,7 +44,7 @@ El entorno virtual se crea automáticamente en `.venv/`.
 
 ---
 
-## 🖥️ Modos de Ejecución (GUI & CLI)
+## Modos de Ejecución (GUI & CLI)
 
 El proyecto soporta **ambos modos de ejecución** de forma nativa e integrada:
 
@@ -83,20 +96,32 @@ uv run pytest -v
 
 ```
 zernike/
+├── .agents/               # Infraestructura de Agentes de IA Especializados (Reglas y Skills)
+│   ├── AGENTS.md          # Reglas globales del workspace (ISO 10110-5, estándar de comentarios)
+│   └── skills/            # Habilidades: optics-researcher, software-architect, code-documenter, etc.
 ├── lib/
 │   ├── __init__.py        # Exporta todos los símbolos públicos
 │   ├── zernike.py         # Motor matemático (Gram-Schmidt, ResultadoZernike, coeficientes A, B, C)
 │   ├── matriz.py          # Parser AST seguro, descomposición de aberraciones, mallas CCD y pupila
-│   ├── io.py              # Sistema de logging estándar y exportación a CSV
-│   └── visualizacion.py   # Animación de flujo recursivo y mapa 3D de error residual
+│   ├── interferometria.py # Demodulación 2D FFT de Takeda, desenvolvimiento de fase y interferograma sintético
+│   ├── io.py              # Sistema de logging estándar y exportación a CSV, Zemax y CODE V
+│   ├── visualizacion.py   # Renderizado 2D/3D, interferogramas sintéticos y mapas de error residual
+│   └── fortran_runner.py  # Wrapper CFFI de aceleración nativa Fortran
+├── gui/                   # Interfaz gráfica de usuario en PySide6 / Qt6
+│   ├── main_window.py     # Ventana principal estilo Zemax con 4 pestañas de visualización
+│   ├── components/        # Componentes POO desacoplados (menú, panel de control, tablas)
+│   └── error_residual_dialog.py # Diálogo 3D flotante no modal del mapa de error residual
 ├── tests/
 │   ├── README.md          # Guía didáctica de pruebas unitarias
 │   ├── test_matriz.py     # Pruebas para normalización, parser AST y aberraciones
-│   └── test_zernike.py    # Pruebas para Gram-Schmidt, ortogonalidad y ajuste completo
-├── main.py                # Programa principal e interfaz interactiva CLI
-├── pyproject.toml         # Configuración del proyecto y dependencias (uv)
-├── poliOrtogonal.ipynb    # Cuaderno Jupyter de desarrollo
-└── README.md              # Documentación general del proyecto
+│   ├── test_zernike.py    # Pruebas para Gram-Schmidt, ortogonalidad y ajuste completo
+│   ├── test_gui.py        # Pruebas automatizadas de la interfaz gráfica PySide6
+│   ├── test_interferometria.py # Pruebas de demodulación Takeda 2D y síntesis de franjas
+│   └── test_fortran.py    # Validación cruzada Python vs. Fortran
+├── docs/                  # Documentación teórica y guías de desarrollo
+├── main.py                # Orquestador CLI e iniciador de la GUI
+├── gui_app.py             # Punto de entrada directo a la interfaz de escritorio
+└── pyproject.toml         # Configuración del proyecto y dependencias (uv)
 ```
 
 ---
@@ -150,6 +175,15 @@ Datos (X, Y, W)
 | `verificar_ortogonalidad(V)` | Valida $\langle V_i, V_j \rangle \approx 0$. |
 | `verificar_formulas(resultados)` | Validación cruzada de Ecs. 23 y 26 (retorna `bool`). |
 
+### `lib.interferometria`
+
+| Función | Descripción |
+|---|---|
+| `demodular_fase_fft2d(img)` | Extracción de fase continua mediante la Transformada de Fourier 2D (Takeda et al., 1982) e isolación del pico $+f_0$. |
+| `desenvolver_fase_2d(fase_wrap)` | Desenvolviendo de fase 2D (*phase unwrapping*) eliminando discontinuidades de $2\pi$. |
+| `extraer_puntos_pupila_circular(fase, img)` | Recorta y normaliza los puntos dentro del disco unitario $\rho \le 1.0$. |
+| `sintetizar_interferograma_desde_zernike(A, N, carrier, escala)` | Genera la simulación óptica directa $I(x,y)$ con frecuencia portadora inclinada $(f_x, f_y)$ e iluminación gaussiana de fondo. |
+
 ### `lib.matriz`
 
 | Función | Descripción |
@@ -165,7 +199,7 @@ Datos (X, Y, W)
 
 | Función | Descripción |
 |---|---|
-| `inicializar_logger(filename)` | Configura el logger estándar de Python (`logging.getLogger("zernike")`) para consola y archivo sin monkey-patching. |
+| `inicializar_logger(filename)` | Configura el logger estándar de Python (`logging.getLogger("zernike")`) para consola y archivo en `output/` sin monkey-patching. |
 | `exportar_resultados_csv(...)` | Exporta coordenadas, datos reales, ajustados y error residual a CSV. |
 | `exportar_zemax(A, R_pupila, lambda)` | Exporta los coeficientes de Zernike al formato estándar de Zemax OpticStudio (`.zrn`). |
 | `exportar_codev(A, R_pupila)` | Exporta los coeficientes al formato de superficie de CODE V (`.dat`). |
@@ -176,6 +210,8 @@ Datos (X, Y, W)
 |---|---|
 | `graficar_flujo_zernike(resultados)` | Ventana interactiva de Matplotlib con la animación del flujo recursivo de capas. |
 | `mapa_fase_3d(X, Y, Z_diff)` | Gráfica 3D del error residual ($Z_{exp} - Z_{fit}$) para identificar deformaciones ópticas no capturadas. |
+| `graficar_interferograma_sintetico(...)` | Renderizado bidimensional del interferograma óptico sintético adaptado al tema dinámico (Oscuro/Claro). |
+
 
 ---
 
@@ -202,4 +238,11 @@ uv run python build_executable.py
 
 > Malacara, D. (Ed.). (1990). *Optical Shop Testing* (2nd ed.). Wiley.  
 > ISO 10110-5: *Optics and photonics — Preparation of drawings for optical elements and systems — Part 5: Surface form tolerances*.
+
+---
+
+## Licencia
+
+Este proyecto está licenciado bajo los términos de la **[Licencia MIT](LICENSE)**. Eres libre de usar, modificar y distribuir este software para propósitos académicos, científicos o comerciales.
+
 
