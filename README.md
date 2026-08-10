@@ -71,7 +71,7 @@ Al ejecutar `main.py` sin banderas, la consola interactiva te presentará el sig
 | **1 — CCD_SENSOR** | Malla simétrica $N \times M$ de píxeles CCD con origen en el centro óptico, filtrada por pupila circular y evaluación matemática configurable. |
 | **2 — CSV** | Carga de datos experimentales desde archivo `.csv` $(X, Y, Z)$. |
 | **3 — CIRCULO** | Generación uniforme de puntos en el círculo unitario ($N=50$). |
-| **4 — CCD (Legacy)** | Simulación sobre 4 cuadrantes fijos con filtro de pupila. |
+| **4 — CCD** | Simulación sobre 4 cuadrantes fijos con filtro de pupila. |
 | **5 — CUADRANTE** | Demostración de desbordamiento por dominio asimétrico (Cuadrante I). |
 
 Al finalizar la sección de Zernike, el programa imprime los coeficientes $A$, realiza la **descomposición de aberraciones ópticas primarias** y muestra el **mapa tridimensional del error residual**.
@@ -218,22 +218,31 @@ Datos (X, Y, W)
 
 ---
 
-## Compilación de Ejecutables Standalone (Linux y Windows)
+---
 
-El proyecto incluye la configuración y automatizaciones necesarias para empaquetar la aplicación en un ejecutable independiente (*standalone*) que no requiere la instalación de Python ni dependencias en el sistema de destino. El ejecutable lanza directamente la interfaz gráfica en PySide6.
+## Compilación y Automatización CI/CD (Linux y Windows)
 
-Para generar el ejecutable en el sistema actual (Linux o Windows):
+El proyecto cuenta con scripts de compilación local y un flujo automatizado de integración continua en GitHub Actions.
+
+*(Consulta la **[Guía de Automatización CI/CD y Versionado Semántico (Git Tags)](docs/flujo_cicd_y_etiquetado.md)** para la especificación detallada de compilación en GitHub Actions y etiquetado de versiones).*
+
+### Compilación Local
+
+Para generar los ejecutables standalone de forma local en el sistema operativo actual:
 
 ```bash
-# 1. Sincronizar el entorno y dependencias de desarrollo
+# 1. Sincronizar el entorno y dependencias de desarrollo con uv
 uv sync --all-groups
 
 # 2. Generar el ejecutable standalone
 uv run python build_executable.py
+
+# 3. (Opcional en Linux) Generar paquetes instalables .deb y .rpm
+uv run python build_packages.py
 ```
 
-- **Linux**: El ejecutable binario se generará en `dist/zernike-gui`.
-- **Windows**: El ejecutable se generará en `dist\zernike-gui.exe`.
+- **Linux**: El binario ejecutable se generará en `dist/zernike-gui`, y los paquetes en `dist/*.deb` y `dist/*.rpm`.
+- **Windows**: El ejecutable standalone se generará en `dist\zernike-gui.exe`.
 
 ---
 

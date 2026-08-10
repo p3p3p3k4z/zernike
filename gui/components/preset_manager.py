@@ -5,6 +5,7 @@ Modulo de gestion de presets de ecuaciones opticas e historial persistente de si
 Almacena presets predefinidos, historial reciente y configuraciones personalizadas del usuario en JSON.
 """
 
+import sys
 import os
 import json
 from PySide6.QtWidgets import (
@@ -60,7 +61,8 @@ class PresetStorage:
     """
     def __init__(self, filepath=None):
         if filepath is None:
-            config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config")
+            base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            config_dir = os.path.join(base_dir, "config")
             os.makedirs(config_dir, exist_ok=True)
             self.filepath = os.path.join(config_dir, "preset_history.json")
         else:

@@ -29,39 +29,47 @@ class MplCanvasWidget(QWidget):
         self.setLayout(layout)
 
     def clear(self):
-        """Limpia los ejes de la figura."""
+        """Limpia los ejes de la figura y actualiza de forma asíncrona."""
         self.figure.clear()
-        self.canvas.draw()
+        self.canvas.draw_idle()
 
     def set_figure(self, fig):
         """
-        Reemplaza limpiamente la figura en el lienzo.
-        Elimina el canvas anterior de Qt para prevenir superposiciones visuales y congelamientos.
+        Reemplaza la figura en el lienzo de forma segura sin destruir QWidgets.
+        Mantiene el lienzo PySide6 persistente para prevenir violaciones de segmento (SegFault)
+        al cambiar de ventana o espacio de trabajo en Linux/Wayland.
         """
+        if fig is None:
+            return
+
         import matplotlib.pyplot as plt
 
-        # Desvincular de pyplot para evitar interferencias
-        plt.close(fig)
+        # Si es la misma figura, simplemente redibujar
+        if self.figure == fig:
+            self.canvas.draw_idle()
+            return
 
-        if hasattr(self, 'canvas') and self.canvas is not None:
-            self.layout().removeWidget(self.canvas)
-            self.canvas.setParent(None)
-            self.canvas.deleteLater()
-
-        if hasattr(self, 'figure') and self.figure is not None and self.figure != fig:
+        # Cerrar la figura previa en pyplot si aplica
+        if self.figure is not None and self.figure != fig:
             plt.close(self.figure)
 
+        # Vincular la nueva figura al lienzo persistente de PySide6
         self.figure = fig
-        self.canvas = FigureCanvas(self.figure)
-        self.layout().addWidget(self.canvas)
-        self.toolbar.canvas = self.canvas
-        self.toolbar.update()
+        self.canvas.figure = self.figure
+        self.figure.set_canvas(self.canvas)
 
+        # Actualizar la barra de herramientas de navegación
+        if hasattr(self, 'toolbar') and self.toolbar is not None:
+            self.toolbar.canvas = self.canvas
+            self.toolbar.update()
+
+        # Re-inicializar controles 3D si la figura contiene ejes 3D
         for ax in self.figure.axes:
             if hasattr(ax, 'mouse_init'):
                 ax.mouse_init()
 
-        self.canvas.draw()
+        # Redibujar asíncronamente en el hilo principal de Qt
+        self.canvas.draw_idle()
 
 
 

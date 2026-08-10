@@ -41,15 +41,26 @@ def crear_paquete_deb():
     debian_dir = os.path.join(deb_root, "DEBIAN")
     bin_dir = os.path.join(deb_root, "usr", "bin")
     apps_dir = os.path.join(deb_root, "usr", "share", "applications")
+    icons_dir = os.path.join(deb_root, "usr", "share", "icons", "hicolor", "256x256", "apps")
+    pixmaps_dir = os.path.join(deb_root, "usr", "share", "pixmaps")
     
     os.makedirs(debian_dir, exist_ok=True)
     os.makedirs(bin_dir, exist_ok=True)
     os.makedirs(apps_dir, exist_ok=True)
+    os.makedirs(icons_dir, exist_ok=True)
+    os.makedirs(pixmaps_dir, exist_ok=True)
 
     # Copiar binario ejecutable
     target_bin = os.path.join(bin_dir, APP_NAME)
     shutil.copy2(binario_abs, target_bin)
     os.chmod(target_bin, 0o755)
+
+    # Copiar icono gráfico desde assets/icon.png
+    src_icon = os.path.abspath(os.path.join("assets", "icon.png"))
+    if os.path.exists(src_icon):
+        shutil.copy2(src_icon, os.path.join(icons_dir, f"{APP_NAME}.png"))
+        shutil.copy2(src_icon, os.path.join(pixmaps_dir, f"{APP_NAME}.png"))
+        print(f"Icono gráfico copiado a la estructura del paquete.")
 
     # Crear archivo DEBIAN/control
     control_content = f"""Package: {APP_NAME}
@@ -65,12 +76,12 @@ Description: Ajuste y Descomposición de Polinomios de Zernike (ISO 10110-5)
     with open(os.path.join(debian_dir, "control"), "w", encoding="utf-8") as f:
         f.write(control_content)
 
-    # Crear lanzador .desktop
+    # Crear lanzador .desktop vinculando el icono zernike-gui
     desktop_content = f"""[Desktop Entry]
 Name=Zernike Metrology GUI
 Comment=Ajuste de Polinomios de Zernike e Interferometría 2D
 Exec=/usr/bin/{APP_NAME}
-Icon=utilities-terminal
+Icon={APP_NAME}
 Terminal=false
 Type=Application
 Categories=Science;Engineering;Physics;
@@ -104,17 +115,24 @@ def crear_paquete_rpm():
 
     print(f"\n--- Generando paquete Fedora/RHEL (.rpm) ---")
 
+    # Limpiar archivo RPM previo si existe
+    if os.path.exists(output_rpm):
+        try:
+            os.remove(output_rpm)
+        except OSError:
+            pass
+
     # Intentar con fpm
     if shutil.which("fpm"):
         try:
             subprocess.run([
-                "fpm", "-s", "deb", "-t", "rpm",
+                "fpm", "-f", "-s", "deb", "-t", "rpm",
                 "--package", output_rpm, deb_path
             ], check=True)
             print(f"ÉXITO: Paquete RPM generado en: {output_rpm}")
             return
-        except subprocess.CalledProcessError:
-            pass
+        except subprocess.CalledProcessError as err:
+            print(f"Error al ejecutar fpm: {err}")
 
     # Intentar con alien
     if shutil.which("alien"):
