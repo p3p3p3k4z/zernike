@@ -1,6 +1,7 @@
 referencias/
 img/
 .venv/
+.pytest_cache/
 .pycache/
 __pycache__/
 *.pyc
@@ -12,9 +13,11 @@ c_impl/bin/
 *.bin
 zernike_temp.bin
 
+# Archivos temporales de compilación y distibución de PyInstaller
 dist/
 build/
-*.spec
+build_app/
 output/
-*txt
+*.txt
 *.pth
+!zernike_gui.spec

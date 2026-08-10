@@ -179,7 +179,27 @@ Datos (X, Y, W)
 
 ---
 
+## Compilación de Ejecutables Standalone (Linux y Windows)
+
+El proyecto incluye la configuración y automatizaciones necesarias para empaquetar la aplicación en un ejecutable independiente (*standalone*) que no requiere la instalación de Python ni dependencias en el sistema de destino. El ejecutable lanza directamente la interfaz gráfica en PySide6.
+
+Para generar el ejecutable en el sistema actual (Linux o Windows):
+
+```bash
+# 1. Sincronizar el entorno y dependencias de desarrollo
+uv sync --all-groups
+
+# 2. Generar el ejecutable standalone
+uv run python build_executable.py
+```
+
+- **Linux**: El ejecutable binario se generará en `dist/zernike-gui`.
+- **Windows**: El ejecutable se generará en `dist\zernike-gui.exe`.
+
+---
+
 ## Referencias
 
 > Malacara, D. (Ed.). (1990). *Optical Shop Testing* (2nd ed.). Wiley.  
 > ISO 10110-5: *Optics and photonics — Preparation of drawings for optical elements and systems — Part 5: Surface form tolerances*.
+

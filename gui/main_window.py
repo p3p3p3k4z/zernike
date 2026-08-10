@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QKeySequence, QAction
+from PySide6.QtGui import QKeySequence, QAction, QIcon
 
 from gui.canvas import MplCanvasWidget
 from gui.styles import obtener_estilo_tema
@@ -56,6 +56,15 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.setWindowTitle("Zernike — Polinomios Ortogonales de Superficies Ópticas (ISO 10110-5)")
         self.resize(1340, 860)
         self.setMinimumSize(1024, 700)
+
+        # Cargar icono de la aplicación
+        ruta_base = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+        ruta_icono_png = os.path.join(ruta_base, "assets", "icon.png")
+        ruta_icono_ico = os.path.join(ruta_base, "assets", "icon.ico")
+        if os.path.exists(ruta_icono_png):
+            self.setWindowIcon(QIcon(ruta_icono_png))
+        elif os.path.exists(ruta_icono_ico):
+            self.setWindowIcon(QIcon(ruta_icono_ico))
 
         # Variables de estado del modelo
         self.ultimo_resultado = None
