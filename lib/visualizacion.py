@@ -255,13 +255,17 @@ def graficar_pupila(
 def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_scale=1.0, wireframe=False, show_grid=True):
     """
     Grafica la superficie o error residual en 3D.
+    El figsize no se fija aqui: MplCanvasWidget.set_figure() ajusta la figura
+    al tamanio real del canvas tras el ciclo de layout de Qt.
     Optimizado con triangulacion espacial eficiente para soportar hasta 50,000 puntos en tiempo real.
     """
     from mpl_toolkits.mplot3d import Axes3D
-    
-    fig = plt.figure(figsize=(10, 8))
+
+    # figsize omitido intencionalmente para evitar que la figura desborde el contenedor.
+    # El rescalado se realiza en MplCanvasWidget._rescalar_figura_al_canvas().
+    fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    
+
     Z_scaled = Z_diff * z_scale
 
     n_tot = len(X_c)

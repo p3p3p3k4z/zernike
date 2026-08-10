@@ -276,13 +276,26 @@ class ZernikeZemaxMainWindow(QMainWindow):
         return self.tabs
 
     def _al_cambiar_pestana_principal(self, index: int):
-        """Redibuja de forma asíncrona y limpia la pestaña activa para evitar superposiciones o congelamientos en Qt."""
+        """
+        Programa el redibujo de la pestana activa de forma diferida con QTimer.singleShot(0).
+        El diferimiento garantiza que el layout de QTabWidget haya terminado de asignar
+        las dimensiones finales del contenedor antes de que Matplotlib renderice.
+        Un retardo adicional de 50 ms se aplica a la pestana 3D para estabilizar
+        la proyeccion de la camara antes del primer dibujo.
+        """
+        from PySide6.QtCore import QTimer
+
         if index == 1 and hasattr(self, 'canvas_ccd'):
-            self.canvas_ccd.canvas.draw_idle()
+            QTimer.singleShot(0, self.canvas_ccd._redibujar_con_rescalado)
+
         elif index == 2 and hasattr(self, 'canvas_3d'):
-            self.canvas_3d.canvas.draw_idle()
+            QTimer.singleShot(50, self._redibujar_3d_main)
+
         elif index == 3 and hasattr(self, 'canvas_sintetico'):
-            self.canvas_sintetico.canvas.draw_idle()
+            QTimer.singleShot(0, self.canvas_sintetico._redibujar_con_rescalado)
+
+
+
 
 
 

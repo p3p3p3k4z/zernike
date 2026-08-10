@@ -13,7 +13,7 @@ import subprocess
 import platform
 
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 APP_NAME = "zernike-gui"
 DEB_DIR_NAME = f"{APP_NAME}_{VERSION}_amd64"
 
@@ -55,12 +55,12 @@ def crear_paquete_deb():
     shutil.copy2(binario_abs, target_bin)
     os.chmod(target_bin, 0o755)
 
-    # Copiar icono gráfico desde assets/icon.png
+    # Copiar iconodesde assets/icon.png
     src_icon = os.path.abspath(os.path.join("assets", "icon.png"))
     if os.path.exists(src_icon):
         shutil.copy2(src_icon, os.path.join(icons_dir, f"{APP_NAME}.png"))
         shutil.copy2(src_icon, os.path.join(pixmaps_dir, f"{APP_NAME}.png"))
-        print(f"Icono gráfico copiado a la estructura del paquete.")
+        print(f"Icono copiado a la estructura del paquete.")
 
     # Crear archivo DEBIAN/control
     control_content = f"""Package: {APP_NAME}
@@ -68,7 +68,7 @@ Version: {VERSION}
 Section: science
 Priority: optional
 Architecture: amd64
-Maintainer: Zernike Project <m4r10@zernike.org>
+Maintainer: Zernike Project <ragm030119@gs.utm.mx>
 Description: Ajuste y Descomposición de Polinomios de Zernike (ISO 10110-5)
  Aplicación de escritorio metrológica para el cálculo de aberraciones ópticas,
  interferometría 2D (Takeda FFT) y mapas tridimensionales de error residual.

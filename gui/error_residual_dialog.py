@@ -29,7 +29,15 @@ class ErrorResidual3DDialog(Base3DPlotDialog):
             parent=parent
         )
 
-        self._actualizar_grafico_3d()
+        # El primer dibujo se difiere a showEvent para garantizar que
+        # el canvas tenga sus dimensiones reales antes de renderizar.
+
+    def showEvent(self, event):
+        """Renderiza el grafico 3D una vez que la ventana es visible y dimensionada."""
+        super().showEvent(event)
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(50, self._actualizar_grafico_3d)
+
 
     def _actualizar_grafico_3d(self):
         cmap_name, elev, azim, z_scale, wireframe, show_grid = self._obtener_parametros_render()

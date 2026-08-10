@@ -8,7 +8,7 @@ Hereda de Base3DPlotDialog para compartir todos los controles manuales 3D y tema
 
 import numpy as np
 from PySide6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QGroupBox
+    QHBoxLayout, QLabel, QComboBox, QPushButton
 )
 from PySide6.QtCore import Qt
 
@@ -50,6 +50,7 @@ class ZernikeViewer3DDialog(Base3DPlotDialog):
         self.resultado_zernike = resultado_zernike
         self.polinomios = polinomios_zernike()
         self.r_actual = 1
+        self._bloqueando_combo = False
 
         self._generar_malla_circulo_unitaria()
 
@@ -61,7 +62,14 @@ class ZernikeViewer3DDialog(Base3DPlotDialog):
         )
 
         self._personalizar_layout()
-        self._actualizar_grafico_3d()
+        # El primer dibujo se difiere a showEvent para garantizar que
+        # el canvas tenga sus dimensiones reales antes de renderizar.
+
+    def showEvent(self, event):
+        """Renderiza el primer grafico 3D una vez que la ventana es visible y dimensionada."""
+        super().showEvent(event)
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(50, self._actualizar_grafico_3d)
 
     def _generar_malla_circulo_unitaria(self, num_puntos=60):
         x = np.linspace(-1.0, 1.0, num_puntos)
@@ -72,47 +80,46 @@ class ZernikeViewer3DDialog(Base3DPlotDialog):
         self.Y_grid = yy[mask]
 
     def _personalizar_layout(self):
-        # 1. Selector de Polinomio arriba de la barra de controles
-        layout_selector = QHBoxLayout()
-        layout_selector.addWidget(QLabel("Seleccionar Polinomio:"))
+        # Fila de navegacion: Anterior | ComboBox | Siguiente | etiqueta de formula
+        layout_nav = QHBoxLayout()
 
         self.btn_anterior = QPushButton("< Anterior")
+        self.btn_anterior.setFixedWidth(90)
         self.btn_anterior.clicked.connect(self._anterior_polinomio)
-        layout_selector.addWidget(self.btn_anterior)
+        layout_nav.addWidget(self.btn_anterior)
 
         self.combo_polinomio = QComboBox()
         for r in range(1, 22):
             info = INFORMACION_ZERNIKE[r]
-            texto = f"r={r:02d} | Z_{info['n']}^{{{info['m']}}} : {info['nombre']}"
+            texto = f"r={r:02d}  Z_{info['n']}^{{{info['m']}}}  {info['nombre']}"
             self.combo_polinomio.addItem(texto, r)
         self.combo_polinomio.currentIndexChanged.connect(self._cambio_combo_polinomio)
-        layout_selector.addWidget(self.combo_polinomio, stretch=1)
+        layout_nav.addWidget(self.combo_polinomio, stretch=1)
 
         self.btn_siguiente = QPushButton("Siguiente >")
+        self.btn_siguiente.setFixedWidth(90)
         self.btn_siguiente.clicked.connect(self._siguiente_polinomio)
-        layout_selector.addWidget(self.btn_siguiente)
+        layout_nav.addWidget(self.btn_siguiente)
 
-        self.layout_base.insertLayout(0, layout_selector)
+        self.layout_base.insertLayout(0, layout_nav)
 
-        # 2. Panel Informativo Inferior
-        grupo_info = QGroupBox("Detalles de la Aberracion Optica")
-        layout_info = QVBoxLayout(grupo_info)
+        # Etiqueta de informacion (formula y coeficiente) al pie
+        self.lbl_info = QLabel()
+        self.lbl_info.setAlignment(Qt.AlignCenter)
+        self.lbl_info.setStyleSheet("font-size: 12px; padding: 4px 8px;")
+        self.layout_base.addWidget(self.lbl_info)
 
-        self.lbl_nombre = QLabel()
-        self.lbl_nombre.setStyleSheet("font-weight: bold; font-size: 13px;")
-        layout_info.addWidget(self.lbl_nombre)
-
-        self.lbl_formula = QLabel()
-        self.lbl_formula.setStyleSheet("font-size: 12px; color: #475569;")
-        layout_info.addWidget(self.lbl_formula)
-
-        self.lbl_coeficiente = QLabel()
-        self.lbl_coeficiente.setStyleSheet("font-weight: bold; font-size: 12px; color: #2563EB;")
-        layout_info.addWidget(self.lbl_coeficiente)
-
-        self.layout_base.addWidget(grupo_info)
+    def _ir_a_polinomio(self, r: int):
+        """Navega al polinomio r (1..21) actualizando el combo y el grafico de forma atomica."""
+        self.r_actual = r
+        self._bloqueando_combo = True
+        self.combo_polinomio.setCurrentIndex(r - 1)
+        self._bloqueando_combo = False
+        self._actualizar_grafico_3d()
 
     def _cambio_combo_polinomio(self, index):
+        if self._bloqueando_combo:
+            return
         r = self.combo_polinomio.itemData(index)
         if r is not None:
             self.r_actual = r
@@ -120,12 +127,11 @@ class ZernikeViewer3DDialog(Base3DPlotDialog):
 
     def _anterior_polinomio(self):
         if self.r_actual > 1:
-            self.combo_polinomio.setCurrentIndex(self.r_actual - 2)
+            self._ir_a_polinomio(self.r_actual - 1)
 
     def _siguiente_polinomio(self):
         if self.r_actual < 21:
-            self.combo_polinomio.setCurrentIndex(self.r_actual)
-
+            self._ir_a_polinomio(self.r_actual + 1)
 
     def _actualizar_grafico_3d(self):
         info = INFORMACION_ZERNIKE[self.r_actual]
@@ -149,12 +155,17 @@ class ZernikeViewer3DDialog(Base3DPlotDialog):
 
         self.canvas.set_figure(fig)
 
-        # Actualizar detalles de aberracion
-        self.lbl_nombre.setText(f"Polinomio r={self.r_actual} (n={info['n']}, m={info['m']}): {info['nombre']}")
-        self.lbl_formula.setText(f"Ecuacion Cartesiana Z_{self.r_actual}(x,y) = {info['formula']}")
-
+        # Actualizar etiqueta inferior con formula y coeficiente
+        coef_texto = ""
         if self.resultado_zernike is not None and hasattr(self.resultado_zernike, 'A'):
             A_val = self.resultado_zernike.A[self.r_actual - 1]
-            self.lbl_coeficiente.setText(f"Coeficiente A_{self.r_actual} estimado en el ultimo ajuste: {A_val:.6f}")
-        else:
-            self.lbl_coeficiente.setText("Coeficiente A_r: Sin ajuste calculado aun en la simulacion principal.")
+            coef_texto = f"   |   A_{self.r_actual} = {A_val:.6f}"
+
+        self.lbl_info.setText(
+            f"r={self.r_actual}  (n={info['n']}, m={info['m']})   "
+            f"Z(x,y) = {info['formula']}{coef_texto}"
+        )
+
+        # Activar / desactivar botones de navegacion en los extremos
+        self.btn_anterior.setEnabled(self.r_actual > 1)
+        self.btn_siguiente.setEnabled(self.r_actual < 21)

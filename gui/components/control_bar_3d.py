@@ -35,7 +35,7 @@ class ControlBar3D(QWidget):
         layout.addWidget(QLabel("Mapa de Colores:"))
         self.combo_cmap = QComboBox()
         self.combo_cmap.addItems([
-            "coolwarm", "seismic", "twilight", "viridis", "inferno", "plasma", "magma", "rainbow", "Spectral", "jet", "cividis"
+            "viridis", "coolwarm", "seismic", "twilight", "inferno", "plasma", "magma", "rainbow", "Spectral", "jet", "cividis"
         ])
         self.combo_cmap.setToolTip("Selecciona el mapa de colores para la superficie 3D.")
         self.combo_cmap.currentTextChanged.connect(self._al_cambiar_colormap)
