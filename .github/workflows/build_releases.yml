@@ -73,12 +73,8 @@ jobs:
       - name: Build Standalone Linux Executable
         run: uv run python build_executable.py
 
-      - name: Generate .deb and .rpm Packages
+      - name: Generate .deb and .rpm Packages (With 3D Icon & Safe Packaging)
         run: uv run python build_packages.py
-
-      - name: Generate RPM with fpm
-        run: |
-          fpm -s deb -t rpm --package dist/zernike-gui-1.0.0-1.x86_64.rpm dist/zernike-gui_1.0.0_amd64.deb
 
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4
@@ -109,11 +105,20 @@ jobs:
           name: zernike-gui-linux
           path: dist
 
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag_name || (startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.0') }}
-          name: Release ${{ inputs.tag_name || (startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.0') }}
+          name: Zernike GUI Release ${{ inputs.tag_name || (startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.0') }}
+          body: |
+            ## Paquetes Binarios Precompilados (Zernike GUI)
+            
+            Descarga directamente el ejecutable o instalador correspondiente a tu sistema operativo:
+            
+            - **Windows 10/11**: `zernike-gui.exe` (Ejecutable portátil de 64 bits)
+            - **Debian / Ubuntu / Linux Mint**: `zernike-gui_1.0.0_amd64.deb` (`sudo dpkg -i ...`)
+            - **Fedora / RHEL / CentOS**: `zernike-gui-1.0.0-1.x86_64.rpm` (`sudo dnf install ...`)
+            - **Linux (Binario Genérico ELF)**: `zernike-gui`
           files: |
             dist/zernike-gui.exe
             dist/zernike-gui

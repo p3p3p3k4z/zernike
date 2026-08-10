@@ -265,9 +265,9 @@ def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_
     Z_scaled = Z_diff * z_scale
 
     n_tot = len(X_c)
-    if n_tot > 6000:
-        # Muestreo espacial para triangulacion 3D fluida a 60fps
-        idx_3d = np.random.choice(n_tot, size=6000, replace=False)
+    if n_tot > 2500:
+        # Muestreo espacial optimizado para triangulación 3D fluida y sin congelamientos
+        idx_3d = np.random.choice(n_tot, size=2500, replace=False)
         X_render, Y_render, Z_render = X_c[idx_3d], Y_c[idx_3d], Z_scaled[idx_3d]
     else:
         X_render, Y_render, Z_render = X_c, Y_c, Z_scaled

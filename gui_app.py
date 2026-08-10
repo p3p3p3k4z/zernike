@@ -13,11 +13,25 @@ from gui.main_window import ZernikeZemaxMainWindow
 
 
 def main():
-    # Estabilidad de escalado y renderizado para servidor de pantalla Linux (Wayland/X11)
+    # Estabilidad de escalado y renderizado para gestores de ventanas
     if sys.platform.startswith("linux"):
-        os.environ.setdefault("QT_AUTO_SCREEN_SCALE_FACTOR", "1")
+        # Configuracion Wayland (Sway/Hyprland) / XCB (i3wm/X11)
+        if "WAYLAND_DISPLAY" in os.environ:
+            os.environ.setdefault("QT_QPA_PLATFORM", "wayland;xcb")
+        elif "DISPLAY" in os.environ:
+            os.environ.setdefault("QT_QPA_PLATFORM", "xcb;wayland")
+
+    # Registro de AppUserModelID en Windows para asociación de icono en la barra de tareas (Win 10/11)
+    elif sys.platform.startswith("win"):
+        try:
+            import ctypes
+            myappid = "zernike.optics.metrology.gui.1.0"
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        except Exception:
+            pass
 
     app = QApplication(sys.argv)
+    app.setDesktopFileName("zernike-gui")
     window = ZernikeZemaxMainWindow()
     window.show()
     sys.exit(app.exec())
