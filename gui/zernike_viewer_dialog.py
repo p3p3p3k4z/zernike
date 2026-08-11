@@ -80,11 +80,15 @@ class ZernikeViewer3DDialog(Base3DPlotDialog):
         self.Y_grid = yy[mask]
 
     def _personalizar_layout(self):
-        # Fila de navegacion: Anterior | ComboBox | Siguiente | etiqueta de formula
+        # Fila de navegacion: Icono Izquierda | ComboBox Polinomios | Icono Derecha
+        from PySide6.QtWidgets import QStyle
+
         layout_nav = QHBoxLayout()
 
-        self.btn_anterior = QPushButton("< Anterior")
-        self.btn_anterior.setFixedWidth(90)
+        self.btn_anterior = QPushButton()
+        self.btn_anterior.setIcon(self.style().standardIcon(QStyle.SP_ArrowLeft))
+        self.btn_anterior.setToolTip("Polinomio Anterior (r - 1)")
+        self.btn_anterior.setFixedWidth(42)
         self.btn_anterior.clicked.connect(self._anterior_polinomio)
         layout_nav.addWidget(self.btn_anterior)
 
@@ -96,8 +100,10 @@ class ZernikeViewer3DDialog(Base3DPlotDialog):
         self.combo_polinomio.currentIndexChanged.connect(self._cambio_combo_polinomio)
         layout_nav.addWidget(self.combo_polinomio, stretch=1)
 
-        self.btn_siguiente = QPushButton("Siguiente >")
-        self.btn_siguiente.setFixedWidth(90)
+        self.btn_siguiente = QPushButton()
+        self.btn_siguiente.setIcon(self.style().standardIcon(QStyle.SP_ArrowRight))
+        self.btn_siguiente.setToolTip("Polinomio Siguiente (r + 1)")
+        self.btn_siguiente.setFixedWidth(42)
         self.btn_siguiente.clicked.connect(self._siguiente_polinomio)
         layout_nav.addWidget(self.btn_siguiente)
 
@@ -108,6 +114,12 @@ class ZernikeViewer3DDialog(Base3DPlotDialog):
         self.lbl_info.setAlignment(Qt.AlignCenter)
         self.lbl_info.setStyleSheet("font-size: 12px; padding: 4px 8px;")
         self.layout_base.addWidget(self.lbl_info)
+        self._actualizar_estado_botones()
+
+    def _actualizar_estado_botones(self):
+        """Habilita o deshabilita los botones de navegacion segun los limites r=1 y r=21."""
+        self.btn_anterior.setEnabled(self.r_actual > 1)
+        self.btn_siguiente.setEnabled(self.r_actual < 21)
 
     def _ir_a_polinomio(self, r: int):
         """Navega al polinomio r (1..21) actualizando el combo y el grafico de forma atomica."""
@@ -115,6 +127,7 @@ class ZernikeViewer3DDialog(Base3DPlotDialog):
         self._bloqueando_combo = True
         self.combo_polinomio.setCurrentIndex(r - 1)
         self._bloqueando_combo = False
+        self._actualizar_estado_botones()
         self._actualizar_grafico_3d()
 
     def _cambio_combo_polinomio(self, index):
@@ -123,6 +136,7 @@ class ZernikeViewer3DDialog(Base3DPlotDialog):
         r = self.combo_polinomio.itemData(index)
         if r is not None:
             self.r_actual = r
+            self._actualizar_estado_botones()
             self._actualizar_grafico_3d()
 
     def _anterior_polinomio(self):

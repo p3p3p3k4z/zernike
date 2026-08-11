@@ -7,6 +7,7 @@ visualización del espectro de Fourier 2D, demodulación de fase y extracción d
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox,
     QDoubleSpinBox, QLabel, QFileDialog, QMessageBox, QGroupBox, QCheckBox
@@ -143,7 +144,9 @@ class InterferogramProcessorDialog(QDialog):
         bg_color = '#2E3440' if is_dark else '#FFFFFF'
         text_color = '#ECEFF4' if is_dark else '#0F172A'
 
-        fig = plt.figure(figsize=(9, 6), facecolor=bg_color)
+        # Crear figura directamente con Figure() para no registrarla en pyplot (Gcf),
+        # evitando la aparicion de ventanas nativas vacias (FigureManagerQT) en Windows.
+        fig = Figure(figsize=(9, 6), facecolor=bg_color)
 
         if metodo_idx == 0:  # Fourier 2D (Takeda)
             fase_enrollada, espectro_log, mascara_filtro = demodular_fase_fft2d(matriz_proc, radio_filtro)

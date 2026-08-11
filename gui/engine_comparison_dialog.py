@@ -7,6 +7,7 @@ el motor de calculo en Python (NumPy) frente al motor nativo en Fortran.
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
     QHeaderView, QMessageBox, QGroupBox
@@ -144,7 +145,9 @@ class EngineComparisonDialog(QDialog):
                 self.tabla_coef.setItem(r - 1, 3, item_diff)
 
             # 5. Generar Grafico Scatter Comparativo en Canvas
-            fig = plt.figure(figsize=(8, 5))
+            # Crear figura directamente con Figure() para no registrarla en pyplot (Gcf),
+            # evitando la aparicion de ventanas nativas vacias (FigureManagerQT) en Windows.
+            fig = Figure(figsize=(8, 5))
             ax = fig.add_subplot(111)
 
             ax.scatter(fit_py, fit_ft, alpha=0.7, color='#2563EB', edgecolor='#1E40AF', s=25, label='Puntos (Z_fit Py vs Fortran)')

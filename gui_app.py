@@ -54,6 +54,11 @@ def main():
     latido.timeout.connect(lambda: None)
 
     window = ZernikeZemaxMainWindow()
+
+    # Asignar a QApplication el icono de la ventana principal para que la barra de tareas de Windows lo despliegue
+    if not window.windowIcon().isNull():
+        app.setWindowIcon(window.windowIcon())
+
     window.show()
     sys.exit(app.exec())
 

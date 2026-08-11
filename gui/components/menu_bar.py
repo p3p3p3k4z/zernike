@@ -68,16 +68,15 @@ class AppMenuBar(QMenuBar):
 
         menu_herramientas.addSeparator()
 
-        act_recursivo = QAction("Recursivo Zernike", self)
-        act_recursivo.setShortcut(QKeySequence("Ctrl+F"))
-        act_recursivo.setStatusTip("Muestra exclusivamente la animación de capas de colores y dependencias recursivas (graficar_flujo_zernike)")
-        act_recursivo.triggered.connect(self.controller.lanzar_animacion_flujo_zernike)
-        menu_herramientas.addAction(act_recursivo)
+        act_interferograma = QAction("Analizar Imagen de Interferograma (FFT 2D / Takeda)", self)
+        act_interferograma.setStatusTip("Extrae automáticamente el mapa de fase (X, Y, Z) a partir de una imagen de interferograma")
+        act_interferograma.triggered.connect(self.controller._lanzar_procesador_interferogramas)
+        menu_herramientas.addAction(act_interferograma)
 
-        act_flujo = QAction("Flujo Zernike", self)
-        act_flujo.setStatusTip("Abre la secuencia completa de ventanas y representaciones gráficas del algoritmo")
-        act_flujo.triggered.connect(self.controller.lanzar_flujo_completo_zernike)
-        menu_herramientas.addAction(act_flujo)
+        act_comparar_motores = QAction("Comparar Motores (Python vs. Fortran)", self)
+        act_comparar_motores.setStatusTip("Compara matemáticamente y de forma gráfica los resultados de los motores Python y Fortran")
+        act_comparar_motores.triggered.connect(self.controller._comparar_motores_calculo)
+        menu_herramientas.addAction(act_comparar_motores)
 
         act_visor_zernike = QAction("Visor 3D de Polinomios de Zernike (21 Polinomios)", self)
         act_visor_zernike.setShortcut(QKeySequence("Ctrl+Z"))
@@ -85,20 +84,7 @@ class AppMenuBar(QMenuBar):
         act_visor_zernike.triggered.connect(self.controller._mostrar_visor_polinomios_3d)
         menu_herramientas.addAction(act_visor_zernike)
 
-        act_comparar_motores = QAction("Comparar Motores (Python vs. Fortran)", self)
-        act_comparar_motores.setStatusTip("Compara matemáticamente y de forma gráfica los resultados de los motores Python y Fortran")
-        act_comparar_motores.triggered.connect(self.controller._comparar_motores_calculo)
-        menu_herramientas.addAction(act_comparar_motores)
-
-        act_interferograma = QAction("Analizar Imagen de Interferograma (FFT 2D / Takeda)", self)
-        act_interferograma.setStatusTip("Extrae automáticamente el mapa de fase (X, Y, Z) a partir de una imagen de interferograma")
-        act_interferograma.triggered.connect(self.controller._lanzar_procesador_interferogramas)
-        menu_herramientas.addAction(act_interferograma)
-
-        act_sintetico = QAction("Sintetizar Interferograma Óptico desde Zernike", self)
-        act_sintetico.setStatusTip("Genera el patrón de interferencia sintético 2D a partir del frente de onda ajustado")
-        act_sintetico.triggered.connect(self.controller._mostrar_interferograma_sintetico)
-        menu_herramientas.addAction(act_sintetico)
+        menu_herramientas.addSeparator()
 
         # Submenu de Seleccion de Motor de Calculo
         menu_motor = QMenu("Motor de Cálculo Matemático", self)
@@ -119,23 +105,7 @@ class AppMenuBar(QMenuBar):
         menu_motor.addAction(self.act_motor_ft)
 
         menu_herramientas.addMenu(menu_motor)
-        menu_herramientas.addSeparator()
-
-        act_dist_ccd = QAction("Distribución CCD en 4 Cuadrantes", self)
-        act_dist_ccd.setStatusTip("Muestra el plano cartesiano de distribución de puntos en 4 cuadrantes")
-        act_dist_ccd.triggered.connect(self.controller._mostrar_grafica_distribucion_ccd_flotante)
-        menu_herramientas.addAction(act_dist_ccd)
-
-        act_pupila_flotante = QAction("Filtrado por Pupila Óptica", self)
-        act_pupila_flotante.setStatusTip("Muestra la gráfica del filtrado circular por pupila óptica")
-        act_pupila_flotante.triggered.connect(self.controller._mostrar_grafica_pupila_flotante)
-        menu_herramientas.addAction(act_pupila_flotante)
-
-        act_3d_flotante = QAction("Mapa de Error Residual 3D", self)
-        act_3d_flotante.setStatusTip("Muestra el gráfico tridimensional del error residual")
-        act_3d_flotante.triggered.connect(self.controller._mostrar_grafica_3d_flotante)
-        menu_herramientas.addAction(act_3d_flotante)
-
+        
         menu_herramientas.addSeparator()
 
         act_reset = QAction("Restablecer Parámetros por Defecto", self)
@@ -146,11 +116,47 @@ class AppMenuBar(QMenuBar):
 
         # --- Menu Ver ---
         menu_ver = self.addMenu("&Ver")
-        act_ver_sintetico = QAction("Ver Interferograma Sintético (Ctrl+I)", self)
-        act_ver_sintetico.setShortcut(QKeySequence("Ctrl+I"))
-        act_ver_sintetico.setStatusTip("Conmuta a la Pestaña 4 con el interferograma sintético")
-        act_ver_sintetico.triggered.connect(self.controller._ir_a_pestana_interferograma_sintetico)
-        menu_ver.addAction(act_ver_sintetico)
+
+        # Submenu Gráficas Flotantes
+        menu_graficas = menu_ver.addMenu("Gráficas Flotantes de Análisis")
+
+        act_dist_ccd = QAction("Distribución CCD en 4 Cuadrantes", self)
+        act_dist_ccd.setStatusTip("Muestra el plano cartesiano de distribución de puntos en 4 cuadrantes")
+        act_dist_ccd.triggered.connect(self.controller._mostrar_grafica_distribucion_ccd_flotante)
+        menu_graficas.addAction(act_dist_ccd)
+
+        act_pupila_flotante = QAction("Filtrado por Pupila Óptica", self)
+        act_pupila_flotante.setStatusTip("Muestra la gráfica del filtrado circular por pupila óptica")
+        act_pupila_flotante.triggered.connect(self.controller._mostrar_grafica_pupila_flotante)
+        menu_graficas.addAction(act_pupila_flotante)
+
+        act_3d_flotante = QAction("Mapa de Error Residual 3D", self)
+        act_3d_flotante.setStatusTip("Muestra el gráfico tridimensional del error residual")
+        act_3d_flotante.triggered.connect(self.controller._mostrar_grafica_3d_flotante)
+        menu_graficas.addAction(act_3d_flotante)
+
+        act_sintetico = QAction("Sintetizar Interferograma Óptico desde Zernike", self)
+        act_sintetico.setStatusTip("Genera el patrón de interferencia sintético 2D a partir del frente de onda ajustado")
+        act_sintetico.triggered.connect(self.controller._mostrar_interferograma_sintetico)
+        menu_graficas.addAction(act_sintetico)
+
+        menu_ver.addSeparator()
+
+        # Submenu Flujos y Animaciones
+        menu_flujos = menu_ver.addMenu("Flujos y Animaciones")
+
+        act_recursivo = QAction("Animación Recursiva de Zernike", self)
+        act_recursivo.setShortcut(QKeySequence("Ctrl+F"))
+        act_recursivo.setStatusTip("Muestra exclusivamente la animación de capas de colores y dependencias recursivas (graficar_flujo_zernike)")
+        act_recursivo.triggered.connect(self.controller.lanzar_animacion_flujo_zernike)
+        menu_flujos.addAction(act_recursivo)
+
+        act_flujo = QAction("Flujo Completo del Algoritmo", self)
+        act_flujo.setStatusTip("Abre la secuencia completa de ventanas y representaciones gráficas del algoritmo")
+        act_flujo.triggered.connect(self.controller.lanzar_flujo_completo_zernike)
+        menu_flujos.addAction(act_flujo)
+
+        menu_ver.addSeparator()
 
         act_tema = QAction("Alternar Tema Claro / Oscuro", self)
         act_tema.setShortcut(QKeySequence("Ctrl+T"))

@@ -13,6 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib.patches as mpatches
+from matplotlib.figure import Figure
 
 _VARS = ['U', 'V', 'D', 'B', 'C', 'A']
 
@@ -255,6 +256,8 @@ def graficar_pupila(
 def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_scale=1.0, wireframe=False, show_grid=True):
     """
     Grafica la superficie o error residual en 3D.
+    Se usa Figure() directamente para no registrar la figura en el gestor de pyplot (Gcf),
+    evitando la aparicion de una ventana nativa vacia (FigureManagerQT) en ejecutables Windows.
     El figsize no se fija aqui: MplCanvasWidget.set_figure() ajusta la figura
     al tamanio real del canvas tras el ciclo de layout de Qt.
     Optimizado con triangulacion espacial eficiente para soportar hasta 50,000 puntos en tiempo real.
@@ -263,14 +266,14 @@ def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_
 
     # figsize omitido intencionalmente para evitar que la figura desborde el contenedor.
     # El rescalado se realiza en MplCanvasWidget._rescalar_figura_al_canvas().
-    fig = plt.figure()
+    fig = Figure()
     ax = fig.add_subplot(111, projection='3d')
 
     Z_scaled = Z_diff * z_scale
 
     n_tot = len(X_c)
     if n_tot > 2500:
-        # Muestreo espacial optimizado para triangulación 3D fluida y sin congelamientos
+        # Muestreo espacial optimizado para triangulacion 3D fluida y sin congelamientos
         idx_3d = np.random.choice(n_tot, size=2500, replace=False)
         X_render, Y_render, Z_render = X_c[idx_3d], Y_c[idx_3d], Z_scaled[idx_3d]
     else:
@@ -281,16 +284,18 @@ def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_
     else:
         surf = ax.plot_trisurf(X_render, Y_render, Z_render, cmap=cmap, linewidth=0.1, alpha=0.85, edgecolor='none')
 
-
     fig.colorbar(surf, shrink=0.5, aspect=10, pad=0.1, label='Magnitud Z')
-    
+
     ax.set_title(title)
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Amplitud Z')
     ax.grid(show_grid)
-    
-    plt.tight_layout()
+
+    try:
+        fig.tight_layout()
+    except Exception:
+        pass
     return fig
 
 
@@ -298,13 +303,16 @@ def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_
 # FUNCIONES DE VISUALIZACION PARA LAS 4 ETAPAS DE INTERFEROMETRIA
 # =============================================================================
 
-def graficar_interferograma_original(matriz_img: np.ndarray, is_dark: bool = False) -> plt.Figure:
-    """Etapa 1: Grafica la imagen original del interferograma en escala de grises."""
+def graficar_interferograma_original(matriz_img: np.ndarray, is_dark: bool = False) -> Figure:
+    """
+    Etapa 1: Grafica la imagen original del interferograma en escala de grises.
+    Usa Figure() directamente para evitar la creacion de ventanas nativas en ejecutables Windows.
+    """
     bg_color = '#2E3440' if is_dark else '#FFFFFF'
     text_color = '#ECEFF4' if is_dark else '#0F172A'
 
-    fig, ax = plt.subplots(figsize=(6, 5), facecolor=bg_color)
-    ax.set_facecolor(bg_color)
+    fig = Figure(figsize=(6, 5), facecolor=bg_color)
+    ax = fig.add_subplot(111, facecolor=bg_color)
     im = ax.imshow(matriz_img, cmap='gray', origin='lower', extent=[-1, 1, -1, 1])
     ax.set_title("Etapa 1: Interferograma Original", fontsize=11, fontweight='bold', color=text_color)
     ax.set_xlabel("X (normalizado)", color=text_color)
@@ -313,17 +321,20 @@ def graficar_interferograma_original(matriz_img: np.ndarray, is_dark: bool = Fal
 
     cb = fig.colorbar(im, ax=ax)
     cb.ax.tick_params(colors=text_color)
-    plt.tight_layout()
+    fig.tight_layout()
     return fig
 
 
-def graficar_espectro_fft2d(espectro_log: np.ndarray, mascara_filtro: np.ndarray, is_dark: bool = False) -> plt.Figure:
-    """Etapa 2: Grafica el espectro de frecuencias 2D en escala logaritmica con la mascara del filtro."""
+def graficar_espectro_fft2d(espectro_log: np.ndarray, mascara_filtro: np.ndarray, is_dark: bool = False) -> Figure:
+    """
+    Etapa 2: Grafica el espectro de frecuencias 2D en escala logaritmica con la mascara del filtro.
+    Usa Figure() directamente para evitar la creacion de ventanas nativas en ejecutables Windows.
+    """
     bg_color = '#2E3440' if is_dark else '#FFFFFF'
     text_color = '#ECEFF4' if is_dark else '#0F172A'
 
-    fig, ax = plt.subplots(figsize=(6, 5), facecolor=bg_color)
-    ax.set_facecolor(bg_color)
+    fig = Figure(figsize=(6, 5), facecolor=bg_color)
+    ax = fig.add_subplot(111, facecolor=bg_color)
     im = ax.imshow(espectro_log, cmap='magma', origin='lower')
     if mascara_filtro is not None:
         ax.contour(mascara_filtro, levels=[0.5], colors='cyan', linewidths=1.8)
@@ -332,17 +343,20 @@ def graficar_espectro_fft2d(espectro_log: np.ndarray, mascara_filtro: np.ndarray
 
     cb = fig.colorbar(im, ax=ax)
     cb.ax.tick_params(colors=text_color)
-    plt.tight_layout()
+    fig.tight_layout()
     return fig
 
 
-def graficar_fase_enrollada(fase_enrollada: np.ndarray, is_dark: bool = False) -> plt.Figure:
-    """Etapa 3: Grafica la fase enrollada (wrapped phase) en el intervalo [-pi, +pi]."""
+def graficar_fase_enrollada(fase_enrollada: np.ndarray, is_dark: bool = False) -> Figure:
+    """
+    Etapa 3: Grafica la fase enrollada (wrapped phase) en el intervalo [-pi, +pi].
+    Usa Figure() directamente para evitar la creacion de ventanas nativas en ejecutables Windows.
+    """
     bg_color = '#2E3440' if is_dark else '#FFFFFF'
     text_color = '#ECEFF4' if is_dark else '#0F172A'
 
-    fig, ax = plt.subplots(figsize=(6, 5), facecolor=bg_color)
-    ax.set_facecolor(bg_color)
+    fig = Figure(figsize=(6, 5), facecolor=bg_color)
+    ax = fig.add_subplot(111, facecolor=bg_color)
     im = ax.imshow(fase_enrollada, cmap='twilight', origin='lower', extent=[-1, 1, -1, 1])
     ax.set_title("Etapa 3: Fase Enrollada [-pi, +pi]", fontsize=11, fontweight='bold', color=text_color)
     ax.set_xlabel("X", color=text_color)
@@ -351,41 +365,47 @@ def graficar_fase_enrollada(fase_enrollada: np.ndarray, is_dark: bool = False) -
 
     cb = fig.colorbar(im, ax=ax)
     cb.ax.tick_params(colors=text_color)
-    plt.tight_layout()
+    fig.tight_layout()
     return fig
 
 
-def graficar_fase_continua_y_puntos(fase_continua: np.ndarray, X_pts: np.ndarray = None, Y_pts: np.ndarray = None, is_dark: bool = False) -> plt.Figure:
-    """Etapa 4: Grafica el mapa de fase continuo (OPD) con la superposicion de los puntos extraidos."""
+def graficar_fase_continua_y_puntos(fase_continua: np.ndarray, X_pts: np.ndarray = None, Y_pts: np.ndarray = None, is_dark: bool = False) -> Figure:
+    """
+    Etapa 4: Grafica el mapa de fase continuo (OPD) con la superposicion de los puntos extraidos.
+    Usa Figure() directamente para evitar la creacion de ventanas nativas en ejecutables Windows.
+    """
     bg_color = '#2E3440' if is_dark else '#FFFFFF'
     text_color = '#ECEFF4' if is_dark else '#0F172A'
 
-    fig, ax = plt.subplots(figsize=(6, 5), facecolor=bg_color)
-    ax.set_facecolor(bg_color)
+    fig = Figure(figsize=(6, 5), facecolor=bg_color)
+    ax = fig.add_subplot(111, facecolor=bg_color)
     im = ax.imshow(fase_continua, cmap='viridis', origin='lower', extent=[-1, 1, -1, 1])
 
     if X_pts is not None and len(X_pts) > 0:
         idx_sample = np.random.choice(len(X_pts), size=min(1200, len(X_pts)), replace=False)
-        ax.scatter(X_pts[idx_sample], Y_pts[idx_sample], s=3, c='cyan', alpha=0.6, label=f'Puntos Extraídos ({len(X_pts)})')
+        ax.scatter(X_pts[idx_sample], Y_pts[idx_sample], s=3, c='cyan', alpha=0.6, label=f'Puntos Extraidos ({len(X_pts)})')
         leg = ax.legend(loc='upper right', fontsize=8)
         if leg:
             leg.get_frame().set_facecolor(bg_color)
             for text in leg.get_texts():
                 text.set_color(text_color)
 
-    ax.set_title(f"Etapa 4: Fase Desenvolviendo & Puntos Extraídos", fontsize=11, fontweight='bold', color=text_color)
+    ax.set_title("Etapa 4: Fase Desenvolviendo & Puntos Extraidos", fontsize=11, fontweight='bold', color=text_color)
     ax.set_xlabel("X", color=text_color)
     ax.set_ylabel("Y", color=text_color)
     ax.tick_params(colors=text_color)
 
     cb = fig.colorbar(im, ax=ax)
     cb.ax.tick_params(colors=text_color)
-    plt.tight_layout()
+    fig.tight_layout()
     return fig
 
 
-def graficar_interferograma_sintetico(A_coefs: np.ndarray, is_dark: bool = False, N: int = 256, franjas_carrier: int = 12) -> plt.Figure:
-    """Sintetiza y grafica la imagen 2D del interferograma a partir de los coeficientes A de Zernike."""
+def graficar_interferograma_sintetico(A_coefs: np.ndarray, is_dark: bool = False, N: int = 256, franjas_carrier: int = 12) -> Figure:
+    """
+    Sintetiza y grafica la imagen 2D del interferograma a partir de los coeficientes A de Zernike.
+    Usa Figure() directamente para evitar la creacion de ventanas nativas en ejecutables Windows.
+    """
     from lib.interferometria import sintetizar_interferograma_desde_zernike
 
     interferograma, X_grid, Y_grid, W_fit_2d = sintetizar_interferograma_desde_zernike(
@@ -395,16 +415,17 @@ def graficar_interferograma_sintetico(A_coefs: np.ndarray, is_dark: bool = False
     bg_color = '#1e1e2e' if is_dark else '#ffffff'
     text_color = '#ffffff' if is_dark else '#000000'
 
-    fig, ax = plt.subplots(figsize=(6, 5), facecolor=bg_color)
-    ax.set_facecolor(bg_color)
+    fig = Figure(figsize=(6, 5), facecolor=bg_color)
+    ax = fig.add_subplot(111, facecolor=bg_color)
 
     im = ax.imshow(interferograma, cmap='gray', extent=[-1, 1, -1, 1], origin='lower')
     cbar = fig.colorbar(im, ax=ax, shrink=0.85)
     cbar.ax.yaxis.set_tick_params(color=text_color)
-    plt.setp(plt.getp(cbar.ax, 'yticklabels'), color=text_color)
+    for label in cbar.ax.get_yticklabels():
+        label.set_color(text_color)
     cbar.set_label('Intensidad Norm. I(x,y)', color=text_color)
 
-    ax.set_title("Interferograma Sintético Reconstruido (Zernike)", color=text_color, fontsize=11, fontweight='bold')
+    ax.set_title("Interferograma Sintetico Reconstruido (Zernike)", color=text_color, fontsize=11, fontweight='bold')
     ax.set_xlabel("X (pupila normalizada)", color=text_color)
     ax.set_ylabel("Y (pupila normalizada)", color=text_color)
     ax.tick_params(colors=text_color)

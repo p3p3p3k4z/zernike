@@ -525,10 +525,9 @@ class ZernikeZemaxMainWindow(QMainWindow):
         if self.ultimo_resultado is None or not hasattr(self, 'canvas_sintetico'):
             return
 
-        is_dark = (getattr(self, 'tema_actual', 'claro') == 'oscuro')
         fig = graficar_interferograma_sintetico(
             A_coefs=self.ultimo_resultado.A,
-            is_dark=is_dark,
+            is_dark=False,  # Siempre claro según requerimiento
             N=256,
             franjas_carrier=12
         )
@@ -536,7 +535,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
 
 
     def _mostrar_interferograma_sintetico(self):
-        """Muestra la pestaña del interferograma sintético y la actualiza si hay datos de ajuste."""
+        """Muestra el interferograma sintético en una ventana flotante independiente."""
         if self.ultimo_resultado is None:
             QMessageBox.information(
                 self,
@@ -544,9 +543,37 @@ class ZernikeZemaxMainWindow(QMainWindow):
                 "Primero debes realizar un ajuste de Zernike para sintetizar el interferograma óptico."
             )
             return
-        self.tabs.setCurrentIndex(3)
-        self._actualizar_grafica_sintetico()
-        self.status_bar.showMessage("Visualizando el interferograma sintético reconstruido.", 3000)
+
+        from PySide6.QtWidgets import QDialog
+        
+        fig = graficar_interferograma_sintetico(
+            A_coefs=self.ultimo_resultado.A,
+            is_dark=False,  # Siempre claro según requerimiento
+            N=256,
+            franjas_carrier=12
+        )
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Interferograma Sintético")
+        dialog.resize(700, 600)
+        
+        layout = QVBoxLayout(dialog)
+        canvas = MplCanvasWidget(dialog)
+        canvas.set_figure(fig)
+        layout.addWidget(canvas)
+        
+        # Forzar tema claro para la grafica y ventana
+        css = obtener_estilo_tema('claro')
+        dialog.setStyleSheet(css)
+
+        dialog.show()
+        
+        # Evitar recoleccion de basura
+        if not hasattr(self, '_dialogs_sinteticos'):
+            self._dialogs_sinteticos = []
+        self._dialogs_sinteticos.append(dialog)
+        
+        self.status_bar.showMessage("Visualizando el interferograma sintético en ventana flotante.", 3000)
 
     def _ir_a_pestana_interferograma_sintetico(self):
         """Conmuta directamente a la Pestaña 4 (Interferograma Sintético)."""

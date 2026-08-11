@@ -369,13 +369,8 @@ if __name__ == "__main__":
     
     # Soporte para flag de linea de comandos: python main.py --gui o -g
     if "--gui" in sys.argv or "-g" in sys.argv:
-        from PySide6.QtWidgets import QApplication
-        from gui.main_window import ZernikeZemaxMainWindow
-        
-        app = QApplication(sys.argv)
-        window = ZernikeZemaxMainWindow()
-        window.show()
-        sys.exit(app.exec())
+        from gui_app import main as lanzar_gui
+        lanzar_gui()
 
     print("\n" + "#"*60)
     print("  LIBRERIA DE POLINOMIOS ORTOGONALES DE ZERNIKE")
