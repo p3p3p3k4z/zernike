@@ -153,6 +153,7 @@ class ZernikeViewer3DDialog(Base3DPlotDialog):
         Z_poly = func_poly(self.X_grid, self.Y_grid)
 
         cmap_name, elev, azim, z_scale, wireframe, show_grid = self._obtener_parametros_render()
+        n_grid, sigma = self._obtener_parametros_suavizado()
 
         titulo_fig = f"Polinomio r={self.r_actual:02d}: {info['nombre']}"
         fig = mapa_fase_3d(
@@ -161,7 +162,9 @@ class ZernikeViewer3DDialog(Base3DPlotDialog):
             cmap=cmap_name,
             z_scale=z_scale,
             wireframe=wireframe,
-            show_grid=show_grid
+            show_grid=show_grid,
+            n_grid=n_grid,
+            sigma=sigma
         )
 
         if hasattr(fig, 'axes') and len(fig.axes) > 0 and hasattr(fig.axes[0], 'view_init'):

@@ -120,10 +120,12 @@ $$\text{Error Residual}(x,y) = Z_{\text{exp}}(x,y) - Z_{\text{fit}}(x,y)$$
 
 La pestaña incluye la barra de controles dinámicos `ControlBar3D`:
 * **Paleta de Colores (Colormap)**: Selección de escalas cromáticas (viridis, plasma, inferno, coolwarm, magma, cividis).
-* **Ángulos de Vista**: Controles numéricos para la elevación y azimut de la cámara 3D.
-* **Escala Z**: Factor de amplificación vertical de la deformación.
+* **Ángulos de Vista**: Controles numéricos para la elevación (-90° a +90°) y azimut (0° a 360°) de la cámara 3D.
+* **Escala Z**: Factor de amplificación vertical de la deformación (0.1x a 10x).
+* **Grilla (Resolución)**: Control numérico para ajustar la densidad de la matriz regular de interpolación cúbica (30 a 200 puntos por lado).
+* **Suavizado (sigma)**: Control numérico para aplicar un filtro gaussiano espacial ($0.0 \le \sigma \le 5.0$) que atenúa el ruido numérico de alta frecuencia y suaviza picos desproporcionados en el residuo.
 * **Modo Malla de Alambre (Wireframe)**: Conmutador entre superficie sólida renderizada y estructura de alambre.
-* **Cuadrícula**: Conmutador para mostrar u ocultar la grilla de ejes.
+* **Cuadrícula**: Conmutador para mostrar u ocultar la grilla de los ejes 3D.
 
 ---
 

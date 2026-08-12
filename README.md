@@ -44,11 +44,15 @@ El entorno virtual se crea automáticamente en `.venv/`.
 
 ---
 
+## Documentación del Proyecto (`docs/`)
+
+Toda la documentación técnica, teórica, guías de interfaz y flujos de automatización se encuentra disponible en la carpeta **[docs/](docs/)**.
+
+---
+
 ## Modos de Ejecución (GUI & CLI)
 
 El proyecto soporta **ambos modos de ejecución** de forma nativa e integrada:
-
-*(Consulta el **[Manual Técnico de la Interfaz Gráfica](docs/manual_interfaz_gui.md)** para la especificación detallada de cada menú, tabla de aberraciones y panel de control).*
 
 
 ### Modo 1: Interfaz Gráfica de Escritorio (GUI Estilo Zemax)
@@ -212,7 +216,7 @@ Datos (X, Y, W)
 | Función | Descripción |
 |---|---|
 | `graficar_flujo_zernike(resultados)` | Ventana interactiva de Matplotlib con la animación del flujo recursivo de capas. |
-| `mapa_fase_3d(X, Y, Z_diff)` | Gráfica 3D del error residual ($Z_{exp} - Z_{fit}$) para identificar deformaciones ópticas no capturadas. |
+| `mapa_fase_3d(X, Y, Z_diff)` | Genera una representación gráfica tridimensional continua del mapa de error residual ($Z_{\text{exp}} - Z_{\text{fit}}$) mediante interpolación en grilla regular y filtrado gaussiano opcional. |
 | `graficar_interferograma_sintetico(...)` | Renderizado bidimensional del interferograma óptico sintético adaptado al tema dinámico (Oscuro/Claro). |
 
 
@@ -224,7 +228,6 @@ Datos (X, Y, W)
 
 El proyecto cuenta con scripts de compilación local y un flujo automatizado de integración continua en GitHub Actions.
 
-*(Consulta la **[Guía de Automatización CI/CD y Versionado Semántico (Git Tags)](docs/flujo_cicd_y_etiquetado.md)** para la especificación detallada de compilación en GitHub Actions y etiquetado de versiones).*
 
 ### Compilación Local
 

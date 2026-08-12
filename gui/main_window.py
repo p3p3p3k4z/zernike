@@ -260,6 +260,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.control_bar_3d.cambio_escala_z.connect(lambda val: self._redibujar_3d_main())
         self.control_bar_3d.cambio_modo_render.connect(lambda mode: self._redibujar_3d_main())
         self.control_bar_3d.cambio_grid.connect(lambda grid: self._redibujar_3d_main())
+        self.control_bar_3d.cambio_suavizado.connect(lambda n, s: self._redibujar_3d_main())
         layout_3d.addWidget(self.control_bar_3d)
 
         self.canvas_3d = MplCanvasWidget(self)
@@ -438,6 +439,8 @@ class ZernikeZemaxMainWindow(QMainWindow):
         z_scale = self.control_bar_3d.spin_escala_z.value()
         wireframe = self.control_bar_3d.chk_wireframe.isChecked()
         show_grid = self.control_bar_3d.chk_grid.isChecked()
+        n_grid = self.control_bar_3d.spin_n_grid.value()
+        sigma = self.control_bar_3d.spin_sigma.value()
 
         try:
             if hasattr(self, 'canvas_3d') and hasattr(self.canvas_3d, 'figure') and self.canvas_3d.figure is not None:
@@ -461,7 +464,9 @@ class ZernikeZemaxMainWindow(QMainWindow):
             cmap=cmap_name,
             z_scale=z_scale,
             wireframe=wireframe,
-            show_grid=show_grid
+            show_grid=show_grid,
+            n_grid=n_grid,
+            sigma=sigma
         )
 
         if hasattr(fig, 'axes') and len(fig.axes) > 0 and hasattr(fig.axes[0], 'view_init'):

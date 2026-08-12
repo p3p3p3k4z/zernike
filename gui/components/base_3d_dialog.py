@@ -38,6 +38,7 @@ class Base3DPlotDialog(QDialog):
         self.control_bar.cambio_escala_z.connect(self._al_cambiar_escala_z)
         self.control_bar.cambio_modo_render.connect(self._al_cambiar_modo_render)
         self.control_bar.cambio_grid.connect(self._al_cambiar_grid)
+        self.control_bar.cambio_suavizado.connect(lambda n, s: self._actualizar_grafico_3d())
         self.layout_base.addWidget(self.control_bar)
 
         # 2. MplCanvasWidget Persistente
@@ -70,6 +71,12 @@ class Base3DPlotDialog(QDialog):
             pass
 
         return cmap_name, elev, azim, z_scale, wireframe, show_grid
+
+    def _obtener_parametros_suavizado(self):
+        """Retorna una tupla con (n_grid, sigma)."""
+        n_grid = self.control_bar.spin_n_grid.value()
+        sigma = self.control_bar.spin_sigma.value()
+        return n_grid, sigma
 
     def _al_cambiar_camara(self, elev: int, azim: int):
         if hasattr(self.canvas.figure, 'axes') and len(self.canvas.figure.axes) > 0:

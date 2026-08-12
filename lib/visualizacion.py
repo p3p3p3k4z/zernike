@@ -253,36 +253,109 @@ def graficar_pupila(
     return fig
 
 
-def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_scale=1.0, wireframe=False, show_grid=True):
+def _filtro_gaussiano_2d(Zi: np.ndarray, sigma: float) -> np.ndarray:
+    """Aplica suavizado gaussiano 2D usando scipy si esta disponible, o NumPy puro como fallback."""
+    if sigma <= 0.0:
+        return Zi
+    try:
+        from scipy.ndimage import gaussian_filter
+        Zi_zero = np.nan_to_num(Zi, nan=0.0)
+        return gaussian_filter(Zi_zero, sigma=sigma, mode='nearest')
+    except ImportError:
+        radius = int(np.ceil(3 * sigma))
+        if radius < 1:
+            radius = 1
+        x = np.arange(-radius, radius + 1)
+        kernel_1d = np.exp(-0.5 * (x / sigma) ** 2)
+        kernel_1d /= kernel_1d.sum()
+
+        Zi_zero = np.nan_to_num(Zi, nan=0.0)
+        out = np.apply_along_axis(lambda m: np.convolve(m, kernel_1d, mode='same'), axis=1, arr=Zi_zero)
+        out = np.apply_along_axis(lambda m: np.convolve(m, kernel_1d, mode='same'), axis=0, arr=out)
+        return out
+
+
+def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_scale=1.0, wireframe=False, show_grid=True, n_grid=80, sigma=0.0):
     """
-    Grafica la superficie o error residual en 3D.
+    Genera una representación gráfica tridimensional continua del mapa de fase o error residual (Z_exp - Z_fit) mediante interpolación en grilla regular y filtrado gaussiano opcional.
     Se usa Figure() directamente para no registrar la figura en el gestor de pyplot (Gcf),
     evitando la aparicion de una ventana nativa vacia (FigureManagerQT) en ejecutables Windows.
     El figsize no se fija aqui: MplCanvasWidget.set_figure() ajusta la figura
     al tamanio real del canvas tras el ciclo de layout de Qt.
-    Optimizado con triangulacion espacial eficiente para soportar hasta 50,000 puntos en tiempo real.
-    """
-    from mpl_toolkits.mplot3d import Axes3D
 
-    # figsize omitido intencionalmente para evitar que la figura desborde el contenedor.
-    # El rescalado se realiza en MplCanvasWidget._rescalar_figura_al_canvas().
+    Parametros
+    ----------
+    X_c, Y_c : np.ndarray
+        Coordenadas de la pupila.
+    Z_diff : np.ndarray
+        Valores de altura / amplitud del error residual.
+    title : str
+        Titulo del grafico.
+    cmap : str
+        Mapa de colores (colormap).
+    z_scale : float
+        Escala manual del eje vertical Z.
+    wireframe : bool
+        Si es True, renderiza como malla de alambre.
+    show_grid : bool
+        Si es True, muestra la cuadricula de los ejes 3D.
+    n_grid : int
+        Resolucion de la grilla regular de interpolacion (n_grid x n_grid).
+    sigma : float
+        Nivel de suavizado gaussiano (0.0 = sin suavizado).
+    """
     fig = Figure()
     ax = fig.add_subplot(111, projection='3d')
 
     Z_scaled = Z_diff * z_scale
 
-    n_tot = len(X_c)
-    if n_tot > 2500:
-        # Muestreo espacial optimizado para triangulacion 3D fluida y sin congelamientos
-        idx_3d = np.random.choice(n_tot, size=2500, replace=False)
-        X_render, Y_render, Z_render = X_c[idx_3d], Y_c[idx_3d], Z_scaled[idx_3d]
-    else:
-        X_render, Y_render, Z_render = X_c, Y_c, Z_scaled
+    # 1. Generar grilla cartesiana regular en el disco unitario [-1, 1]
+    xi = np.linspace(-1.0, 1.0, n_grid)
+    yi = np.linspace(-1.0, 1.0, n_grid)
+    Xi, Yi = np.meshgrid(xi, yi)
 
+    # 2. Interpolar datos dispersos a la grilla regular (scipy cubic o matplotlib tri fallback)
+    Zi = None
+    try:
+        from scipy.interpolate import griddata
+        Zi = griddata((X_c, Y_c), Z_scaled, (Xi, Yi), method='cubic')
+    except (ImportError, Exception):
+        pass
+
+    if Zi is None or np.all(np.isnan(Zi)):
+        try:
+            import matplotlib.tri as tri
+            triang = tri.Triangulation(X_c, Y_c)
+            interpolator = tri.LinearTriInterpolator(triang, Z_scaled)
+            Zi = interpolator(Xi, Yi)
+        except Exception:
+            pass
+
+    if Zi is None or np.all(np.isnan(Zi)):
+        try:
+            from scipy.interpolate import griddata
+            Zi = griddata((X_c, Y_c), Z_scaled, (Xi, Yi), method='nearest')
+        except (ImportError, Exception):
+            pass
+
+    if Zi is None or np.all(np.isnan(Zi)):
+        Zi = np.zeros_like(Xi)
+
+    # 3. Aplicar mascara de pupila circular unitaria (rho <= 1.0)
+    mascara_pupila = (Xi**2 + Yi**2) > 1.0
+    Zi[mascara_pupila] = np.nan
+
+    # 4. Aplicar filtro de suavizado gaussiano opcional
+    if sigma > 0.0:
+        Zi_smooth = _filtro_gaussiano_2d(Zi, sigma)
+        Zi_smooth[mascara_pupila] = np.nan
+        Zi = Zi_smooth
+
+    # 5. Renderizar superficie continua o malla de alambre
     if wireframe:
-        surf = ax.plot_trisurf(X_render, Y_render, Z_render, cmap=cmap, linewidth=0.6, alpha=0.9, edgecolor='grey')
+        surf = ax.plot_wireframe(Xi, Yi, Zi, rstride=2, cstride=2, cmap=cmap, linewidth=0.6, alpha=0.9)
     else:
-        surf = ax.plot_trisurf(X_render, Y_render, Z_render, cmap=cmap, linewidth=0.1, alpha=0.85, edgecolor='none')
+        surf = ax.plot_surface(Xi, Yi, Zi, cmap=cmap, linewidth=0, antialiased=True, alpha=0.85, rstride=1, cstride=1)
 
     fig.colorbar(surf, shrink=0.5, aspect=10, pad=0.1, label='Magnitud Z')
 

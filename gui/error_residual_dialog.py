@@ -41,6 +41,7 @@ class ErrorResidual3DDialog(Base3DPlotDialog):
 
     def _actualizar_grafico_3d(self):
         cmap_name, elev, azim, z_scale, wireframe, show_grid = self._obtener_parametros_render()
+        n_grid, sigma = self._obtener_parametros_suavizado()
 
         fig = mapa_fase_3d(
             self.X, self.Y, self.Z_diff,
@@ -48,7 +49,9 @@ class ErrorResidual3DDialog(Base3DPlotDialog):
             cmap=cmap_name,
             z_scale=z_scale,
             wireframe=wireframe,
-            show_grid=show_grid
+            show_grid=show_grid,
+            n_grid=n_grid,
+            sigma=sigma
         )
 
         if hasattr(fig, 'axes') and len(fig.axes) > 0 and hasattr(fig.axes[0], 'view_init'):

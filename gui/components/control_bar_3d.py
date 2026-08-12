@@ -14,13 +14,14 @@ from PySide6.QtCore import Signal, Qt
 class ControlBar3D(QWidget):
     """
     Toolbar horizontal con controles para ajustar la perspectiva 3D, Colormap,
-    escala manual del eje Z, modo de renderizado y cuadricula.
+    escala manual del eje Z, modo de renderizado, cuadricula, resolucion de grilla y suavizado.
     """
     cambio_camara = Signal(int, int)
     cambio_colormap = Signal(str)
     cambio_escala_z = Signal(float)
     cambio_modo_render = Signal(bool)
     cambio_grid = Signal(bool)
+    cambio_suavizado = Signal(int, float)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -75,7 +76,29 @@ class ControlBar3D(QWidget):
         self.spin_escala_z.valueChanged.connect(lambda v: self.cambio_escala_z.emit(v))
         layout.addWidget(self.spin_escala_z)
 
-        # 5. Opciones Visuales (Wireframe y Grid)
+        layout.addSpacing(10)
+
+        # 5. Resolucion de Grilla
+        layout.addWidget(QLabel("Grilla:"))
+        self.spin_n_grid = QSpinBox()
+        self.spin_n_grid.setRange(30, 200)
+        self.spin_n_grid.setValue(80)
+        self.spin_n_grid.setSingleStep(10)
+        self.spin_n_grid.setToolTip("Resolucion de la grilla regular de interpolacion cubica (30 a 200 puntos por lado).")
+        self.spin_n_grid.valueChanged.connect(self._al_cambiar_suavizado)
+        layout.addWidget(self.spin_n_grid)
+
+        # 6. Suavizado Gaussiano (Sigma)
+        layout.addWidget(QLabel("Suavizado (sigma):"))
+        self.spin_sigma = QDoubleSpinBox()
+        self.spin_sigma.setRange(0.0, 5.0)
+        self.spin_sigma.setValue(0.0)
+        self.spin_sigma.setSingleStep(0.5)
+        self.spin_sigma.setToolTip("Factor de suavizado gaussiano espacial para atenúar picos de ruido (0.0 = desactivado).")
+        self.spin_sigma.valueChanged.connect(self._al_cambiar_suavizado)
+        layout.addWidget(self.spin_sigma)
+
+        # 7. Opciones Visuales (Wireframe y Grid)
         self.chk_wireframe = QCheckBox("Wireframe")
         self.chk_wireframe.setToolTip("Alterna el renderizado a malla de alambre.")
         self.chk_wireframe.toggled.connect(lambda state: self.cambio_modo_render.emit(state))
@@ -89,10 +112,10 @@ class ControlBar3D(QWidget):
 
         layout.addSpacing(10)
 
-        # 6. Boton Restablecer
+        # 8. Boton Restablecer
         btn_reset = QPushButton("Restablecer Vista")
         btn_reset.setObjectName("btn_preset")
-        btn_reset.setToolTip("Restaura la orientacion inicial de la camara y la escala por defecto.")
+        btn_reset.setToolTip("Restaura la orientacion inicial de la camara, escala y suavizado por defecto.")
         btn_reset.clicked.connect(self.restablecer_vista)
         layout.addWidget(btn_reset)
 
@@ -104,28 +127,38 @@ class ControlBar3D(QWidget):
     def _al_cambiar_colormap(self, cmap_name: str):
         self.cambio_colormap.emit(cmap_name)
 
+    def _al_cambiar_suavizado(self):
+        self.cambio_suavizado.emit(self.spin_n_grid.value(), self.spin_sigma.value())
+
     def restablecer_vista(self):
-        """Vuelve los valores de elevacion, azimut y escala a la configuracion por defecto."""
+        """Vuelve los valores de elevacion, azimut, escala, grilla y suavizado a la configuracion por defecto."""
         self.spin_elev.blockSignals(True)
         self.spin_azim.blockSignals(True)
         self.spin_escala_z.blockSignals(True)
+        self.spin_n_grid.blockSignals(True)
+        self.spin_sigma.blockSignals(True)
         self.chk_wireframe.blockSignals(True)
         self.chk_grid.blockSignals(True)
 
         self.spin_elev.setValue(30)
         self.spin_azim.setValue(45)
         self.spin_escala_z.setValue(1.0)
+        self.spin_n_grid.setValue(80)
+        self.spin_sigma.setValue(0.0)
         self.chk_wireframe.setChecked(False)
         self.chk_grid.setChecked(True)
 
         self.spin_elev.blockSignals(False)
         self.spin_azim.blockSignals(False)
         self.spin_escala_z.blockSignals(False)
+        self.spin_n_grid.blockSignals(False)
+        self.spin_sigma.blockSignals(False)
         self.chk_wireframe.blockSignals(False)
         self.chk_grid.blockSignals(False)
 
         self.cambio_camara.emit(30, 45)
         self.cambio_escala_z.emit(1.0)
+        self.cambio_suavizado.emit(80, 0.0)
         self.cambio_modo_render.emit(False)
         self.cambio_grid.emit(True)
 
