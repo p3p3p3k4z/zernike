@@ -509,5 +509,84 @@ def graficar_interferograma_sintetico(A_coefs: np.ndarray, is_dark: bool = False
     return fig
 
 
+def mapa_zernike_2d(
+    X_c: np.ndarray,
+    Y_c: np.ndarray,
+    Z_poly: np.ndarray,
+    title: str = 'Polinomio de Zernike 2D',
+    cmap: str = 'gray',
+    modo_render: str = 'interferograma',
+    n_franjas: float = 2.0,
+    show_contours: bool = False,
+    show_grid: bool = True,
+    n_grid: int = 160
+) -> Figure:
+    """
+    Genera la representación gráfica bidimensional de un Polinomio de Zernike.
+    Soporta dos modos:
+      - 'interferograma': Modulación por coseno I(x,y) = (1 + cos(2π * n_franjas * Z))/2 (Patrón de Franjas de Interferencia).
+      - 'fase' / 'elevacion': Elevación continua de la fase Z(x,y).
+    """
+    fig = Figure()
+    ax = fig.add_subplot(111)
+
+    xi = np.linspace(-1.0, 1.0, n_grid)
+    yi = np.linspace(-1.0, 1.0, n_grid)
+    Xi, Yi = np.meshgrid(xi, yi)
+
+    Zi = None
+    try:
+        from scipy.interpolate import griddata
+        Zi = griddata((X_c, Y_c), Z_poly, (Xi, Yi), method='cubic')
+    except (ImportError, Exception):
+        pass
+
+    if Zi is None or np.all(np.isnan(Zi)):
+        try:
+            import matplotlib.tri as tri
+            triang = tri.Triangulation(X_c, Y_c)
+            interpolator = tri.LinearTriInterpolator(triang, Z_poly)
+            Zi = interpolator(Xi, Yi)
+        except Exception:
+            pass
+
+    if Zi is None or np.all(np.isnan(Zi)):
+        Zi = np.zeros_like(Xi)
+
+    mascara_pupila = (Xi**2 + Yi**2) > 1.0
+    Zi[mascara_pupila] = np.nan
+
+    if modo_render.lower() in ('interferograma', 'franjas'):
+        # Modulación cosenoidal de interferometría sintética I = (1 + cos(2π * N * Z)) / 2
+        Zi_plot = 0.5 + 0.5 * np.cos(2.0 * np.pi * n_franjas * Zi)
+        cbar_label = 'Intensidad Norm. I(x,y)'
+    else:
+        Zi_plot = Zi
+        cbar_label = 'Fase Z(x,y)'
+
+    im = ax.imshow(Zi_plot, cmap=cmap, extent=[-1, 1, -1, 1], origin='lower')
+    if show_contours:
+        try:
+            color_contorno = 'red' if cmap in ('gray', 'binary', 'gist_gray') else 'black'
+            ax.contour(Xi, Yi, Zi, levels=10, colors=color_contorno, alpha=0.5, linewidths=0.8)
+        except Exception:
+            pass
+
+    fig.colorbar(im, ax=ax, shrink=0.85, label=cbar_label)
+    ax.set_title(title, fontsize=11, fontweight='bold')
+    ax.set_xlabel('X (normalizado)')
+    ax.set_ylabel('Y (normalizado)')
+    if show_grid:
+        ax.grid(True, alpha=0.3)
+    else:
+        ax.grid(False)
+
+    try:
+        fig.tight_layout()
+    except Exception:
+        pass
+    return fig
+
+
 
 

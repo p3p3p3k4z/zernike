@@ -641,6 +641,16 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self._dialog_3d = mostrar_ventana_3d_error_residual(X_in, Y_in, W_in, W_fit, parent=self)
         self.status_bar.showMessage("Gráfico 3D de Error Residual con panel de controles desplegado en ventana flotante.")
 
+    def _mostrar_visor_polinomios_2d(self):
+        """Abre el visor 2D interactivo para explorar de forma individual los 21 Polinomios de Zernike."""
+        from gui.zernike_viewer_2d_dialog import ZernikeViewer2DDialog
+        if hasattr(self, '_dialog_visor_2d') and self._dialog_visor_2d is not None and self._dialog_visor_2d.isVisible():
+            self._dialog_visor_2d.close()
+
+        self._dialog_visor_2d = ZernikeViewer2DDialog(resultado_zernike=self.ultimo_resultado, parent=self)
+        self._dialog_visor_2d.show()
+        self.status_bar.showMessage("Visor 2D de Polinomios de Zernike desplegado.")
+
     def _mostrar_visor_polinomios_3d(self):
         """Abre el visor 3D interactivo para explorar de forma individual los 21 Polinomios de Zernike."""
         if hasattr(self, '_dialog_visor_3d') and self._dialog_visor_3d is not None and self._dialog_visor_3d.isVisible():

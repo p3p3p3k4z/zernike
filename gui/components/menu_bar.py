@@ -78,6 +78,12 @@ class AppMenuBar(QMenuBar):
         act_comparar_motores.triggered.connect(self.controller._comparar_motores_calculo)
         menu_herramientas.addAction(act_comparar_motores)
 
+        act_visor_zernike_2d = QAction("Visor 2D de Polinomios de Zernike (21 Polinomios)", self)
+        act_visor_zernike_2d.setShortcut(QKeySequence("Ctrl+Shift+Z"))
+        act_visor_zernike_2d.setStatusTip("Explora de forma individual cada uno de los 21 Polinomios de Zernike en 2D (Mapa de calor y contornos)")
+        act_visor_zernike_2d.triggered.connect(self.controller._mostrar_visor_polinomios_2d)
+        menu_herramientas.addAction(act_visor_zernike_2d)
+
         act_visor_zernike = QAction("Visor 3D de Polinomios de Zernike (21 Polinomios)", self)
         act_visor_zernike.setShortcut(QKeySequence("Ctrl+Z"))
         act_visor_zernike.setStatusTip("Explora de forma individual cada uno de los 21 Polinomios de Zernike en 3D")

@@ -218,6 +218,47 @@ def test_base_3d_dialog_and_controls(qapp):
     dlg.close()
 
 
+def test_zernike_viewer_2d_dialog(qapp):
+    """
+    Verifica que el visor 2D de los 21 Polinomios de Zernike se instancie y navegue correctamente entre r=1 y r=21.
+    """
+    from gui.zernike_viewer_2d_dialog import ZernikeViewer2DDialog
+
+    dialog = ZernikeViewer2DDialog(resultado_zernike=None, parent=None)
+    assert dialog is not None
+    assert dialog.r_actual == 1
+
+    dialog._siguiente_polinomio()
+    assert dialog.r_actual == 2
+
+    dialog._anterior_polinomio()
+    assert dialog.r_actual == 1
+
+    dialog.combo_polinomio.setCurrentIndex(4)  # r=5 Defocus
+    assert dialog.r_actual == 5
+
+    # Probar controles manuales 2D (Modo, Franjas, Colormap, Contornos, Grid)
+    dialog.control_bar.combo_modo.setCurrentIndex(1)  # Fase
+    assert dialog.control_bar.combo_modo.currentData() == "fase"
+
+    dialog.control_bar.combo_modo.setCurrentIndex(0)  # Interferograma
+    dialog.control_bar.spin_franjas.setValue(4.0)
+    assert dialog.control_bar.spin_franjas.value() == 4.0
+
+    dialog.control_bar.combo_cmap.setCurrentText("coolwarm")
+    dialog.control_bar.chk_contours.setChecked(True)
+    dialog.control_bar.chk_grid.setChecked(False)
+
+    dialog.control_bar.restablecer_vista()
+    assert dialog.control_bar.combo_modo.currentData() == "interferograma"
+    assert dialog.control_bar.spin_franjas.value() == 2.0
+    assert dialog.control_bar.combo_cmap.currentText() == "gray"
+    assert dialog.control_bar.chk_contours.isChecked() is False
+    assert dialog.control_bar.chk_grid.isChecked() is True
+
+    dialog.close()
+
+
 
 
 

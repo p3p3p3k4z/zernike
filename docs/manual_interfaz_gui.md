@@ -152,10 +152,17 @@ Ejecuta de forma paralela el mismo conjunto de datos sobre el motor Python (NumP
 ### 5.3. Visualizador 3D de Polinomios de Zernike (`ZernikePolynomialViewerDialog`)
 Permite seleccionar cualquiera de los 21 polinomios de la base de Zernike ($Z_1 \dots Z_{21}$) y renderizar su superficie teórica pura en 3D con controles completos de rotación y paleta cromática.
 
-### 5.4. Gestor de Presets e Historial (`PresetManagerDialog`)
+### 5.4. Visualizador 2D de Polinomios de Zernike (`ZernikeViewer2DDialog`)
+Permite explorar individualmente en 2D cualquiera de los 21 polinomios de Zernike ($Z_1 \dots Z_{21}$). Soporta dos modos de representación:
+1. **Franjas de Interferencia (Interferograma Sintético)** [Por Defecto]: Modula la fase del polinomio mediante la intensidad cosenoidal $I(x,y) = \frac{1 + \cos(2\pi \cdot N_\lambda \cdot Z(x,y))}{2}$, generando patrones de franjas de interferencia monocromáticas idénticos a los de un interferómetro real.
+2. **Mapa de Fase Continuo (Elevación Topográfica)**: Renderiza el gradiente continuo de fase $Z(x,y)$.
+
+Incorpora la barra de herramientas `ControlBar2D` con ajuste interactivo de la densidad de franjas $N_\lambda$ ($0.5 \dots 10.0\lambda$), paletas cromáticas (por defecto en escala de grises `gray`), contornos y cuadrícula.
+
+### 5.5. Gestor de Presets e Historial (`PresetManagerDialog`)
 Permite guardar expresiones matemáticas personalizadas, etiquetarlas y consultar el registro de ecuaciones evaluadas recientemente.
 
-### 5.5. Diálogo Flotante de Error Residual 3D (`ErrorResidual3DDialog`)
+### 5.6. Diálogo Flotante de Error Residual 3D (`ErrorResidual3DDialog`)
 Permite desanclar el mapa de error residual 3D a una ventana flotante no modal para comparar visualmente superficies mientras se modifican parámetros en el panel principal.
 
 ---
