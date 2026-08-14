@@ -71,28 +71,16 @@ def _generar_graficas_reporte(resultado: ResultadoZernike) -> tuple[str, str, st
     X, Y, W_exp, W_fit = _obtener_datos_completos(resultado)
     error_residual = W_exp - W_fit
 
-    # -------------------------------------------------------------------------
-    # Figura 1: Malla CCD & Pupila Circular Unitarias
-    # -------------------------------------------------------------------------
     mascara_pupila = (X**2 + Y**2) <= 1.0
     fig1 = graficar_pupila(X, Y, mascara_pupila, R=1.0)
     b64_malla_ccd = _fig_to_base64(fig1)
 
-    # -------------------------------------------------------------------------
-    # Figura 2: Error Residual 3D (W_exp - W_fit)
-    # -------------------------------------------------------------------------
     fig2 = mapa_fase_3d(X, Y, error_residual, title='Error Residual 3D (W_exp - W_fit)', cmap='viridis', n_grid=80)
     b64_error_residual = _fig_to_base64(fig2)
 
-    # -------------------------------------------------------------------------
-    # Figura 3: Interferograma Sintético Reconstruido (Idéntico a la GUI)
-    # -------------------------------------------------------------------------
     fig3 = graficar_interferograma_sintetico(resultado.A, is_dark=False, N=256, franjas_carrier=12)
     b64_interferograma = _fig_to_base64(fig3)
 
-    # -------------------------------------------------------------------------
-    # Figura 4: Distribución de Aberraciones de Zernike (Colores Golosina Vivos)
-    # -------------------------------------------------------------------------
     fig4 = graficar_espectro_aberraciones(resultado.A, is_dark=False)
     b64_espectro = _fig_to_base64(fig4)
 

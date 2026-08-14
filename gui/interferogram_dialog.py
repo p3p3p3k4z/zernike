@@ -1,8 +1,8 @@
 """
 gui/interferogram_dialog.py
 ============================
-Cuadro de diálogo interactivo en PySide6 para el procesamiento digital de interferogramas,
-visualización del espectro de Fourier 2D, demodulación de fase y extracción de puntos para Zernike.
+Cuadro de dialogo interactivo en PySide6 para el procesamiento digital de interferogramas,
+visualizacion del espectro de Fourier 2D, demodulacion de fase y extraccion de puntos para Zernike.
 """
 
 import numpy as np
@@ -25,7 +25,7 @@ from lib.interferometria import (
 
 class InterferogramProcessorDialog(QDialog):
     """
-    Diálogo interactivo para cargar interferogramas en imagen,
+    Dialogo interactivo para cargar interferogramas en imagen,
     visualizar el dominio espectral 2D (Takeda) y enviar los puntos (X, Y, Z) al panel principal.
     """
     puntos_extraidos_signal = Signal(object, object, object)  # Emite (X_in, Y_in, W_in)
@@ -51,7 +51,7 @@ class InterferogramProcessorDialog(QDialog):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)
 
-        # 1. Barra de Herramientas y Controles
+        # Barra de herramientas y controles
         grupo_controles = QGroupBox("Controles de Procesamiento de Interferograma")
         layout_controles = QHBoxLayout(grupo_controles)
 
@@ -87,11 +87,11 @@ class InterferogramProcessorDialog(QDialog):
 
         layout.addWidget(grupo_controles)
 
-        # 2. Canvas Matplotlib 2x2 para Visualizacion
+        # Canvas Matplotlib 2x2 para visualizacion
         self.canvas = MplCanvasWidget(self)
         layout.addWidget(self.canvas, stretch=1)
 
-        # 3. Barra Inferior de Estado e Importación
+        # Barra inferior de estado e importacion
         layout_inferior = QHBoxLayout()
 
         self.lbl_info = QLabel("Estado: Listo para procesar.")
@@ -223,7 +223,7 @@ class InterferogramProcessorDialog(QDialog):
 
         self.lbl_info.setText(f"Puntos Extraídos: {len(self.X_extraido)} | Rango Fase: [{np.nanmin(self.W_extraido):.3f}, {np.nanmax(self.W_extraido):.3f}]")
 
-        # Emitir señal de puntos actualizados automáticamente
+        # Emitir senal de puntos actualizados automaticamente
         self.puntos_extraidos_signal.emit(self.X_extraido, self.Y_extraido, self.W_extraido)
 
     def _importar_puntos(self):

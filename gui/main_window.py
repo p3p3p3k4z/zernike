@@ -57,7 +57,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.resize(1340, 860)
         self.setMinimumSize(1024, 700)
 
-        # Cargar icono de la aplicación
+        # Cargar icono de la aplicacion
         ruta_base = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
         ruta_icono_png = os.path.join(ruta_base, "assets", "icon.png")
         ruta_icono_ico = os.path.join(ruta_base, "assets", "icon.ico")
@@ -74,14 +74,11 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.motor_actual = 0  # 0: Python, 1: Fortran
         self.worker = None
 
-
-        # Construir Interfaz primero
+        # Construir interfaz primero
         self._crear_interfaz_principal()
         self._crear_menu_bar()
 
-
-        
-        # Barra de Estado (Heuristica 1: Visibilidad del Estado del Sistema)
+        # Barra de estado
         self.status_bar = QStatusBar(self)
         self.setStatusBar(self.status_bar)
         
@@ -95,13 +92,11 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.lbl_estado_icon = QLabel("Listo")
         self.status_bar.addPermanentWidget(self.lbl_estado_icon)
 
-        # Aplicar Tema Inicial
+        # Aplicar tema inicial
         self._aplicar_estilo_tema("claro")
         self.status_bar.showMessage("Sistema listo. Configura los parámetros y haz clic en 'Ejecutar Ajuste' (Ctrl+E).")
 
-    # =========================================================================
-    # PROPIEDADES DE COMPATIBILIDAD CON COMPONENTES MODULARES
-    # =========================================================================
+    # Propiedades de compatibilidad con componentes modulares
     @property
     def combo_modo(self):
         return self.panel_parametros.combo_modo
@@ -154,9 +149,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
     def card_rms(self):
         return self.summary_tables.card_rms
 
-    # =========================================================================
-    # ESTILOS Y TEMAS
-    # =========================================================================
+    # Estilos y temas
     def _aplicar_estilo_tema(self, tema="claro"):
         """Aplica el estilo visual CSS centralizado en gui.styles."""
         self.tema_actual = tema
@@ -183,18 +176,11 @@ class ZernikeZemaxMainWindow(QMainWindow):
         if hasattr(self, '_redibujar_3d_main'):
             self._redibujar_3d_main()
 
-
-
-    # =========================================================================
-    # MENUS DE LA APLICACION (POO Componente AppMenuBar)
-    # =========================================================================
+    # Menus de la aplicacion
     def _crear_menu_bar(self):
         """Instancia la barra de menu principal modular POO."""
         self.menu_bar = AppMenuBar(self, controller=self)
         self.setMenuBar(self.menu_bar)
-
-
-
 
     def _abrir_manual(self):
         """Despliega el manual de usuario modal."""
@@ -204,9 +190,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
         """Despliega el cuadro de informacion modal."""
         mostrar_acerca_de(self)
 
-    # =========================================================================
-    # CONSTRUCCION DE LA INTERFAZ CENTRAL MODULAR
-    # =========================================================================
+    # Construccion de la interfaz central modular
     def _crear_interfaz_principal(self):
         """Ensambla los componentes modulares ParameterInputPanel y SummaryTablesWidget."""
         widget_central = QWidget()
@@ -215,7 +199,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
 
         splitter = QSplitter(Qt.Horizontal)
 
-        # Panel Izquierdo Modular: Control de Parametros
+        # Panel izquierdo modular: control de parametros
         self.panel_parametros = ParameterInputPanel(self)
         self.panel_parametros.ejecutar_solicitado.connect(self._ejecutar_ajuste)
         self.panel_parametros.imagen_interferograma_seleccionada.connect(self._al_seleccionar_imagen_interferograma)
@@ -223,10 +207,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.panel_parametros.combo_modo.currentIndexChanged.connect(self._al_cambiar_modo_entrada)
         splitter.addWidget(self.panel_parametros)
 
-
-
-
-        # Panel Derecho Modular: Pestanas de Resultados y Lienzos
+        # Panel derecho modular: pestanas de resultados
         panel_derecho = self._crear_panel_pestanas()
         splitter.addWidget(panel_derecho)
 
@@ -237,19 +218,19 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.setCentralWidget(widget_central)
 
     def _crear_panel_pestanas(self) -> QWidget:
-        """Crea el contenedor con las 4 pestañas principales de visualización."""
+        """Crea el contenedor con las 4 pestanas principales de visualizacion."""
         self.tabs = QTabWidget()
 
-        # Tab 1 Modular: Resumen & Aberraciones
+        # Tab 1 modular: resumen y aberraciones
         self.summary_tables = SummaryTablesWidget(self)
         self.summary_tables.notificacion_copia.connect(lambda msg: self.status_bar.showMessage(msg, 3500))
         self.tabs.addTab(self.summary_tables, "Resumen & Aberraciones")
 
-        # Tab 2: Malla CCD & Pupila (2D Canvas)
+        # Tab 2: Malla CCD y pupila
         self.canvas_ccd = MplCanvasWidget(self)
         self.tabs.addTab(self.canvas_ccd, "Malla CCD & Pupila")
 
-        # Tab 3: Error Residual 3D (3D Canvas con Toolbar de control)
+        # Tab 3: Error residual 3D
         container_3d = QWidget()
         layout_3d = QVBoxLayout(container_3d)
         layout_3d.setContentsMargins(0, 0, 0, 0)
@@ -268,7 +249,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
 
         self.tabs.addTab(container_3d, "Error Residual 3D")
 
-        # Tab 4: Interferograma Sintético (2D Canvas)
+        # Tab 4: Interferograma sintetico
         self.canvas_sintetico = MplCanvasWidget(self)
         self.tabs.addTab(self.canvas_sintetico, "Interferograma Sintético")
 
@@ -277,13 +258,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
         return self.tabs
 
     def _al_cambiar_pestana_principal(self, index: int):
-        """
-        Programa el redibujo de la pestana activa de forma diferida con QTimer.singleShot(0).
-        El diferimiento garantiza que el layout de QTabWidget haya terminado de asignar
-        las dimensiones finales del contenedor antes de que Matplotlib renderice.
-        Un retardo adicional de 50 ms se aplica a la pestana 3D para estabilizar
-        la proyeccion de la camara antes del primer dibujo.
-        """
+        """Programa el redibujo de la pestana activa de forma diferida."""
         from PySide6.QtCore import QTimer
 
         if index == 1 and hasattr(self, 'canvas_ccd'):
@@ -300,9 +275,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
 
 
 
-    # =========================================================================
-    # EJECUCION & MOTOR MATEMATICO DE ZERNIKE (ASINCRONO CON QTHREAD)
-    # =========================================================================
+    # Ejecucion y motor matematico de Zernike (asincrono)
     def _ejecutar_ajuste(self):
         """Valida las entradas y ejecuta el motor de calculo Zernike en segundo plano."""
         modo = self.panel_parametros.combo_modo.currentIndex()
@@ -370,10 +343,14 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.worker.start()
 
     def _seleccionar_motor_calculo(self, motor: int):
-        """Cambia el motor numerico activo (0: Python NumPy, 1: Fortran Nativo)."""
+        """Cambia el motor numerico activo (0: Python NumPy, 1: Fortran Nativo) y recalcula si hay datos activos."""
         self.motor_actual = motor
         nombre_motor = "Fortran Nativo (Gram-Schmidt, k=4)" if motor == 1 else "Python (NumPy, k=5, ISO 10110-5)"
         self.status_bar.showMessage(f"Motor de cálculo activo cambiado a: {nombre_motor}", 4000)
+
+        # Si ya existe un resultado o datos cargados en memoria, recalcular de inmediato con el nuevo motor
+        if self.ultimo_resultado is not None or hasattr(self, 'datos_interferograma_cargados') or getattr(self, 'ultimas_coordenadas', None) is not None:
+            self._ejecutar_ajuste()
 
 
     def _al_progreso_worker(self, val: int, msg: str):
@@ -411,7 +388,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.panel_parametros.btn_ejecutar.setEnabled(True)
 
     def _al_cambiar_camara_3d(self, elev: int, azim: int):
-        """Actualiza dinámicamente la inclinación y orientación de la cámara 3D."""
+        """Actualiza dinamicamente la inclinacion y orientacion de la camara 3D."""
         if hasattr(self.canvas_3d.figure, 'axes') and len(self.canvas_3d.figure.axes) > 0:
             ax = self.canvas_3d.figure.axes[0]
             if hasattr(ax, 'view_init'):
@@ -423,7 +400,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self._redibujar_3d_main()
 
     def _redibujar_3d_main(self):
-        """Metodo de conveniencia para redibujar la vista 3D de la pestaña principal."""
+        """Metodo de conveniencia para redibujar la vista 3D de la pestana principal."""
         if self.ultimas_coordenadas is not None and self.ultimo_resultado is not None:
             X_in, Y_in, W_in = self.ultimas_coordenadas
             self._actualizar_grafica_3d(X_in, Y_in, W_in, self.ultimo_resultado.W_fit)
@@ -479,10 +456,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
 
 
     def lanzar_animacion_flujo_zernike(self):
-        """
-        Muestra EXCLUSIVAMENTE la animación de barra de colores y dependencias recursivas (graficar_flujo_zernike).
-        No abre ninguna otra ventana ni representación adicional.
-        """
+        """Muestra la animacion de barra de colores y dependencias recursivas (graficar_flujo_zernike)."""
         if self.ultimo_resultado is None:
             QMessageBox.information(
                 self,
@@ -491,8 +465,11 @@ class ZernikeZemaxMainWindow(QMainWindow):
             )
             return
 
-        if hasattr(self, '_fig_flujo') and self._fig_flujo is not None and plt.fignum_exists(self._fig_flujo.number):
-            plt.close(self._fig_flujo)
+        if hasattr(self, '_fig_flujo') and self._fig_flujo is not None:
+            try:
+                plt.close(self._fig_flujo)
+            except Exception:
+                pass
 
         plt.ion()
         fig, anim = graficar_flujo_zernike(self.ultimo_resultado, intervalo_ms=180, repetir=False)
@@ -502,9 +479,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.status_bar.showMessage("Animación de barra de colores recursiva desplegada en ventana flotante independiente.")
 
     def lanzar_flujo_completo_zernike(self):
-        """
-        Lanza el flujo completo de ventanas flotantes (Distribución CCD 4 Cuadrantes, Pupila 2D y Animación Recursiva).
-        """
+        """Lanza el flujo completo de ventanas flotantes (Distribucion CCD 4 Cuadrantes, Pupila 2D y Animacion Recursiva)."""
         if self.ultimo_resultado is None or not hasattr(self, 'ultimas_coordenadas_raw'):
             QMessageBox.information(
                 self,
@@ -519,28 +494,25 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.lanzar_animacion_flujo_zernike()
         self.status_bar.showMessage("Flujo completo de ventanas flotantes (CCD, Pupila y Animación Recursiva) desplegado.")
 
-
-
     def _mostrar_animacion_flujo(self):
         """Alias de compatibilidad hacia lanzar_animacion_flujo_zernike."""
         self.lanzar_animacion_flujo_zernike()
 
     def _actualizar_grafica_sintetico(self):
-        """Renderiza el mapa 2D del interferograma sintético en la Pestaña 4."""
+        """Renderiza el mapa 2D del interferograma sintetico en la Pestana 4."""
         if self.ultimo_resultado is None or not hasattr(self, 'canvas_sintetico'):
             return
 
         fig = graficar_interferograma_sintetico(
             A_coefs=self.ultimo_resultado.A,
-            is_dark=False,  # Siempre claro según requerimiento
+            is_dark=False,  # Siempre claro segun requerimiento
             N=256,
             franjas_carrier=12
         )
         self.canvas_sintetico.set_figure(fig)
 
-
     def _mostrar_interferograma_sintetico(self):
-        """Muestra el interferograma sintético en una ventana flotante independiente."""
+        """Muestra el interferograma sintetico en una ventana flotante independiente."""
         if self.ultimo_resultado is None:
             QMessageBox.information(
                 self,
@@ -553,7 +525,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
         
         fig = graficar_interferograma_sintetico(
             A_coefs=self.ultimo_resultado.A,
-            is_dark=False,  # Siempre claro según requerimiento
+            is_dark=False,  # Siempre claro segun requerimiento
             N=256,
             franjas_carrier=12
         )
@@ -581,7 +553,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.status_bar.showMessage("Visualizando el interferograma sintético en ventana flotante.", 3000)
 
     def _mostrar_espectro_aberraciones_flotante(self):
-        """Muestra la gráfica de la Distribución de Aberraciones por Coeficiente de Zernike (21 Colores Golosina) en una ventana flotante independiente."""
+        """Muestra la grafica de la Distribucion de Aberraciones por Coeficiente de Zernike en una ventana flotante independiente."""
         if self.ultimo_resultado is None:
             QMessageBox.information(
                 self,
@@ -623,12 +595,11 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.status_bar.showMessage("Visualizando la distribución de aberraciones en ventana flotante.", 3000)
 
     def _ir_a_pestana_interferograma_sintetico(self):
-        """Conmuta directamente a la Pestaña 4 (Interferograma Sintético)."""
+        """Conmuta directamente a la Pestana 4 (Interferograma Sintetico)."""
         self.tabs.setCurrentIndex(3)
 
-
     def _mostrar_grafica_distribucion_ccd_flotante(self):
-        """Abre exclusivamente graficar_distribucion_ccd(X_c, Y_c) en una ventana flotante única."""
+        """Abre exclusivamente graficar_distribucion_ccd(X_c, Y_c) en una ventana flotante unica."""
         if not hasattr(self, 'ultimas_coordenadas_raw') or self.ultimas_coordenadas_raw is None:
             QMessageBox.information(
                 self,
@@ -637,17 +608,34 @@ class ZernikeZemaxMainWindow(QMainWindow):
             )
             return
 
-        if hasattr(self, '_fig_distribucion') and self._fig_distribucion is not None and plt.fignum_exists(self._fig_distribucion.number):
-            plt.close(self._fig_distribucion)
+        from PySide6.QtWidgets import QDialog, QVBoxLayout
+        from gui.canvas import MplCanvasWidget
+        from gui.styles import obtener_estilo_tema
+        from lib.visualizacion import graficar_distribucion_ccd
 
         X_all, Y_all, mask_all, R = self.ultimas_coordenadas_raw
-        plt.ion()
-        self._fig_distribucion = graficar_distribucion_ccd(X_all, Y_all)
-        plt.show(block=False)
+        fig = graficar_distribucion_ccd(X_all, Y_all)
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Distribución CCD (4 Cuadrantes)")
+        dialog.resize(650, 600)
+
+        layout = QVBoxLayout(dialog)
+        canvas = MplCanvasWidget(dialog)
+        canvas.set_figure(fig)
+        layout.addWidget(canvas)
+
+        dialog.setStyleSheet(obtener_estilo_tema(self.tema_actual))
+        dialog.show()
+
+        if not hasattr(self, '_dialogs_distribucion'):
+            self._dialogs_distribucion = []
+        self._dialogs_distribucion.append(dialog)
+
         self.status_bar.showMessage("Gráfica de Distribución CCD (4 Cuadrantes) abierta en ventana flotante.")
 
     def _mostrar_grafica_pupila_flotante(self):
-        """Abre la grafica 2D del filtrado por pupila en una ventana flotante dedicada única."""
+        """Abre la grafica 2D del filtrado por pupila en una ventana flotante dedicada unica."""
         if not hasattr(self, 'ultimas_coordenadas_raw') or self.ultimas_coordenadas_raw is None:
             QMessageBox.information(
                 self,
@@ -656,13 +644,30 @@ class ZernikeZemaxMainWindow(QMainWindow):
             )
             return
 
-        if hasattr(self, '_fig_pupila') and self._fig_pupila is not None and plt.fignum_exists(self._fig_pupila.number):
-            plt.close(self._fig_pupila)
+        from PySide6.QtWidgets import QDialog, QVBoxLayout
+        from gui.canvas import MplCanvasWidget
+        from gui.styles import obtener_estilo_tema
+        from lib.visualizacion import graficar_pupila
 
         X_all, Y_all, mask_all, R = self.ultimas_coordenadas_raw
-        plt.ion()
-        self._fig_pupila = graficar_pupila(X_all, Y_all, mask_all, R)
-        plt.show(block=False)
+        fig = graficar_pupila(X_all, Y_all, mask_all, R)
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Filtrado por Pupila Óptica 2D")
+        dialog.resize(650, 600)
+
+        layout = QVBoxLayout(dialog)
+        canvas = MplCanvasWidget(dialog)
+        canvas.set_figure(fig)
+        layout.addWidget(canvas)
+
+        dialog.setStyleSheet(obtener_estilo_tema(self.tema_actual))
+        dialog.show()
+
+        if not hasattr(self, '_dialogs_pupila'):
+            self._dialogs_pupila = []
+        self._dialogs_pupila.append(dialog)
+
         self.status_bar.showMessage("Gráfica 2D de Pupila Óptica abierta en ventana flotante.")
 
     def _mostrar_grafica_3d_flotante(self):
@@ -684,7 +689,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.status_bar.showMessage("Gráfico 3D de Error Residual con panel de controles desplegado en ventana flotante.")
 
     def _mostrar_vista_modo_zemax(self):
-        """Abre la ventana interactiva flotante idéntica a Zemax OpticStudio con Quick Fit y matriz de coeficientes."""
+        """Abre la ventana interactiva flotante identica a Zemax OpticStudio con Quick Fit y matriz de coeficientes."""
         from gui.zemax_view_dialog import ZemaxViewDialog
         if hasattr(self, '_dialog_zemax_view') and self._dialog_zemax_view is not None and self._dialog_zemax_view.isVisible():
             self._dialog_zemax_view.close()
@@ -731,7 +736,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.status_bar.showMessage("Comparador de Motores (Python vs. Fortran) desplegado.")
 
     def _al_seleccionar_imagen_interferograma(self, filepath: str):
-        """Muestra inmediatamente la previsualización del interferograma en Tab 2 (Malla CCD & Pupila)."""
+        """Muestra inmediatamente la previsualizacion del interferograma en Tab 2 (Malla CCD & Pupila)."""
         if not filepath or not os.path.exists(filepath):
             return
 
@@ -745,7 +750,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
             fig = graficar_interferograma_original(img_limpia, is_dark=is_dark)
 
             self.canvas_ccd.set_figure(fig)
-            self.tabs.setCurrentIndex(1)  # Pestaña Malla CCD & Pupila
+            self.tabs.setCurrentIndex(1)  # Pestana Malla CCD y pupila
             self.status_bar.showMessage(f"Previsualización inmediata cargada: {os.path.basename(filepath)}", 5000)
         except Exception as e:
             self.status_bar.showMessage(f"No se pudo previsualizar la imagen: {str(e)}", 4000)
@@ -760,7 +765,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
 
     def _lanzar_procesador_interferogramas(self):
 
-        """Abre la ventana interactiva de demodulación de interferogramas en imagen."""
+        """Abre la ventana interactiva de demodulacion de interferogramas en imagen."""
         if hasattr(self, '_dialog_interferograma') and self._dialog_interferograma is not None and self._dialog_interferograma.isVisible():
             self._dialog_interferograma.close()
 
@@ -770,9 +775,9 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.status_bar.showMessage("Procesador de Interferogramas (Takeda 2D / Esqueleto) desplegado.")
 
     def _procesar_puntos_interferograma_importados(self, X_in, Y_in, W_in):
-        """Recibe los puntos (X,Y,Z) extraídos del procesador y los prepara para la ejecución desde la ventana principal."""
+        """Recibe los puntos (X,Y,Z) extraidos del procesador y los prepara para la ejecucion desde la ventana principal."""
         self.datos_interferograma_cargados = (X_in, Y_in, W_in)
-        self.panel_parametros.combo_modo.setCurrentIndex(3)  # Imagen de Interferograma
+        self.panel_parametros.combo_modo.setCurrentIndex(3)  # Imagen de interferograma
         self.status_bar.showMessage(
             f"Se cargaron {len(X_in)} puntos del interferograma. Haz clic en 'EJECUTAR AJUSTE DE ZERNIKE (Ctrl+E)' para iniciar.",
             6000
@@ -785,7 +790,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
         )
 
     def _actualizar_grafica_ccd(self, X_all, Y_all, mascara, R):
-        """Usa graficar_pupila() o renderiza la imagen importada de interferograma en la pestaña CCD & Pupila."""
+        """Usa graficar_pupila() o renderiza la imagen importada de interferograma en la pestana CCD y pupila."""
         modo = self.panel_parametros.combo_modo.currentIndex()
         img_filepath = self.panel_parametros.input_img_path.text().strip()
 
@@ -805,16 +810,24 @@ class ZernikeZemaxMainWindow(QMainWindow):
 
 
     def _procesar_exportaciones(self, resultados, X, Y, W):
-        """Ejecuta las exportaciones opcionales marcadas por el usuario."""
+        """Ejecuta las exportaciones opcionales solicitando la ruta de guardado al usuario."""
         A = resultados.A
         error = W - resultados.W_fit
 
         if self.panel_parametros.chk_exp_csv.isChecked():
-            exportar_resultados_csv(X, Y, W, resultados.W_fit, error, filepath='output/zernike_resultados.csv')
+            filepath, _ = QFileDialog.getSaveFileName(self, "Guardar Resultados a CSV", "output/zernike_resultados.csv", "Archivos CSV (*.csv)")
+            if filepath:
+                exportar_resultados_csv(X, Y, W, resultados.W_fit, error, filepath=filepath)
+
         if self.panel_parametros.chk_exp_zemax.isChecked():
-            exportar_zemax(A, filepath='output/zemax_zernike.zrn')
+            filepath, _ = QFileDialog.getSaveFileName(self, "Guardar Coeficientes a Zemax OpticStudio", "output/zemax_zernike.zrn", "Archivos Zemax (*.zrn *.txt)")
+            if filepath:
+                exportar_zemax(A, filepath=filepath)
+
         if self.panel_parametros.chk_exp_codev.isChecked():
-            exportar_codev(A, filepath='output/codev_zernike.dat')
+            filepath, _ = QFileDialog.getSaveFileName(self, "Guardar Coeficientes a CODE V", "output/codev_zernike.dat", "Archivos CODE V (*.dat *.txt)")
+            if filepath:
+                exportar_codev(A, filepath=filepath)
 
     def _exportar_csv_manual(self):
         """Dialogo de exportacion manual a CSV de resultados."""
@@ -851,7 +864,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
             QMessageBox.information(self, "Exportación Exitosa", f"Archivo CODE V guardado en:\n{filepath}")
 
     def _generar_reporte_html_manual(self):
-        """Diálogo de exportación manual para el Reporte Metrológico de Calidad Óptica en HTML."""
+        """Dialogo de exportacion manual para el Reporte Metrologico de Calidad Optica en HTML."""
         if self.ultimo_resultado is None:
             QMessageBox.warning(self, "Sin Ajuste", "Primero debes ejecutar un ajuste de Zernike para generar el reporte metrológico.")
             return

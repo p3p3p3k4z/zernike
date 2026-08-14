@@ -44,7 +44,7 @@ class EngineComparisonDialog(QDialog):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)
 
-        # 1. Panel de Resumen Estadistico
+        # Panel de resumen estadistico
         grupo_stats = QGroupBox("Estadísticas de Correlación (1.0 = Igualdad Perfecta)")
         layout_stats = QHBoxLayout(grupo_stats)
 
@@ -62,17 +62,17 @@ class EngineComparisonDialog(QDialog):
 
         layout.addWidget(grupo_stats)
 
-        # 2. Contenedor Horizontal: Tabla a la Izquierda, Grafico Scatter a la Derecha
+        # Contenedor horizontal de tabla y grafico scatter
         layout_cuerpo = QHBoxLayout()
 
-        # Tabla de Coeficientes A
+        # Tabla de coeficientes
         self.tabla_coef = QTableWidget()
         self.tabla_coef.setColumnCount(4)
         self.tabla_coef.setHorizontalHeaderLabels(["Polinomio", "A (Python)", "A (Fortran)", "|Diferencia|"])
         self.tabla_coef.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         layout_cuerpo.addWidget(self.tabla_coef, stretch=4)
 
-        # Canvas Matplotlib Scatter Plot
+        # Canvas Matplotlib scatter plot
         self.canvas = MplCanvasWidget(self)
         layout_cuerpo.addWidget(self.canvas, stretch=6)
 
@@ -93,14 +93,14 @@ class EngineComparisonDialog(QDialog):
                 )
                 return
 
-            # 1. Ejecutar Motor Python (k=5, 21 polinomios)
+            # Ejecutar motor Python
             polinomios = polinomios_zernike()
             res_python = ajuste_completo(self.X_in, self.Y_in, self.W_in, polinomios, k=5)
 
-            # 2. Ejecutar Motor Fortran (k=4, 15 polinomios)
+            # Ejecutar motor Fortran
             res_fortran = ejecutar_zernike_fortran(self.X_in, self.Y_in, self.W_in)
 
-            # 3. Analisis de Correlacion y Factor de Escala
+            # Analisis de correlacion y factor de escala
             N_comun = min(len(res_python.W_fit), len(res_fortran.W_fit))
             fit_py = res_python.W_fit[:N_comun]
             fit_ft = res_fortran.W_fit[:N_comun]
@@ -118,7 +118,7 @@ class EngineComparisonDialog(QDialog):
             self.lbl_corr_fit.setText(f"Correlación Z Fit: {corr_fit:.6f}")
             self.lbl_escala.setText(f"Factor Escala (Fortran / Py): {factor_escala:.4f}")
 
-            # 4. Llenar Tabla Comparativa A_1 a A_15
+            # Poblar tabla comparativa A1 a A15
             self.tabla_coef.setRowCount(15)
             nombres = ["Piston", "Tilt X", "Tilt Y", "Astig 45", "Defocus", "Astig 0",
                        "Trefoil Y", "Coma X", "Coma Y", "Trefoil X", "Quadrafoil Y",
@@ -144,9 +144,8 @@ class EngineComparisonDialog(QDialog):
                 self.tabla_coef.setItem(r - 1, 2, item_ft)
                 self.tabla_coef.setItem(r - 1, 3, item_diff)
 
-            # 5. Generar Grafico Scatter Comparativo en Canvas
-            # Crear figura directamente con Figure() para no registrarla en pyplot (Gcf),
-            # evitando la aparicion de ventanas nativas vacias (FigureManagerQT) en Windows.
+            # Generar grafico scatter comparativo
+            # Crear figura con Figure() evitando ventanas vacias en Windows.
             fig = Figure(figsize=(8, 5))
             ax = fig.add_subplot(111)
 

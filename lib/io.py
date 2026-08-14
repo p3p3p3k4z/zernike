@@ -95,43 +95,28 @@ def exportar_datos_iniciales_csv(X, Y, Z, filepath='output/datos_iniciales.csv')
 
 
 
-# Mapeo ISO 10110-5 / ANSI Z80.28 de índices (n, m) y descripciones ópticas
-_ZERNIKE_METADATA_ISO = [
-    (0,  0, "Piston"),
-    (1,  1, "Tilt X (Inclinacion X)"),
-    (1, -1, "Tilt Y (Inclinacion Y)"),
-    (2,  2, "Astigmatismo 45 deg"),
-    (2,  0, "Defocus (Desenfoque)"),
-    (2, -2, "Astigmatismo 0 deg"),
-    (3,  3, "Trefoil X"),
-    (3,  1, "Coma X"),
-    (3, -1, "Coma Y"),
-    (3, -3, "Trefoil Y"),
-    (4,  4, "Tetrafoil X"),
-    (4,  2, "Astigmatismo Secundario 45 deg"),
-    (4,  0, "Aberracion Esferica 3er Orden"),
-    (4, -2, "Astigmatismo Secundario 0 deg"),
-    (4, -4, "Tetrafoil Y"),
-    (5,  5, "Pentafoil X"),
-    (5,  3, "Trefoil Secundario X"),
-    (5,  1, "Coma Secundaria X"),
-    (5, -1, "Coma Secundaria Y"),
-    (5, -3, "Trefoil Secundario Y"),
-    (5, -5, "Pentafoil Y"),
-]
+from lib.zernike import INFORMACION_ZERNIKE_ISO
+
+_ZERNIKE_METADATA_ISO = [(info['n'], info['m'], info['nombre']) for info in INFORMACION_ZERNIKE_ISO]
 
 
 def exportar_zemax(A, R_pupila=1.0, longitud_onda=0.6328, filepath='output/zemax_zernike.zrn'):
     """
-    Exporta el vector de coeficientes de Zernike A en el formato estándar de Zemax OpticStudio.
+    Exporta el vector de coeficientes de Zernike A en el formato nativo de Zemax OpticStudio (.zrn / .txt).
 
     Parametros
     ----------
-    A             : ndarray (L,) -- Coeficientes de Zernike (ISO 10110-5)
-    R_pupila      : float        -- Radio de la pupila de normalización en mm
-    longitud_onda : float        -- Longitud de onda de referencia en micras (ej. 0.6328 um)
-    filepath      : str          -- Ruta del archivo de salida (.zrn / .txt)
+    A             : ndarray (L,) o ResultadoZernike -- Coeficientes de Zernike (ISO 10110-5)
+    R_pupila      : float                             -- Radio de la pupila de normalización en mm
+    longitud_onda : float                             -- Longitud de onda de referencia en micras (ej. 0.6328 um)
+    filepath      : str                               -- Ruta del archivo de salida (.zrn / .txt)
     """
+    if hasattr(A, 'A'):
+        A = A.A
+    if isinstance(R_pupila, str):
+        filepath = R_pupila
+        R_pupila = 1.0
+
     try:
         _asegurar_directorio(filepath)
         L = len(A)
@@ -168,10 +153,16 @@ def exportar_codev(A, R_pupila=1.0, filepath='output/codev_zernike.dat'):
 
     Parametros
     ----------
-    A        : ndarray (L,) -- Coeficientes de Zernike (ISO 10110-5)
-    R_pupila : float        -- Radio de apertura / pupila de normalización
-    filepath : str          -- Ruta del archivo de salida (.dat / .txt)
+    A        : ndarray (L,) o ResultadoZernike -- Coeficientes de Zernike (ISO 10110-5)
+    R_pupila : float                             -- Radio de apertura / pupila de normalización
+    filepath : str                               -- Ruta del archivo de salida (.dat / .txt)
     """
+    if hasattr(A, 'A'):
+        A = A.A
+    if isinstance(R_pupila, str):
+        filepath = R_pupila
+        R_pupila = 1.0
+
     try:
         _asegurar_directorio(filepath)
         L = len(A)

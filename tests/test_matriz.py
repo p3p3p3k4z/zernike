@@ -1,23 +1,4 @@
-"""
-===============================================================================
-MÓDULO DE PRUEBAS UNITARIAS: lib.matriz
-===============================================================================
-Este archivo contiene pruebas automatizadas para verificar el correcto funcionamiento 
-de las funciones matemáticas y auxiliares definidas en `lib/matriz.py`.
-
-¿Qué es una prueba unitaria?
------------------------------
-Una prueba unitaria es una funcion de código que aísla un componente pequeño de 
-nuestro software (funcion) y comprueba autoaáticamente que, dada una entrada conocida 
-(inputs), la funcion devuelva la salida exacta esperada (output).
-
-Estructura típica de un test:
-1. Preparación (Arrange): Definimos datos de prueba conocidos.
-2. Ejecución (Act): Invocamos la funcion que queremos evaluar.
-3. Afirmación (Assert): Usamos la palabra reservada `assert` para validar que la 
-   respuesta real sea exactamente igual a la respuesta teorica.
-===============================================================================
-"""
+"""Pruebas unitarias para las funciones de matriz y procesamiento de datos (lib/matriz.py)."""
 
 import pytest
 import numpy as np
@@ -31,74 +12,36 @@ from lib.matriz import (
 
 
 def test_normalizar_vector():
-    """
-    OBJETIVO: Probar la funcion
- `normalizar_vector(datos)`.
-    
-    ¿QUÉ DEBE HACER? 
-    Tomar un vector numerico y dividirlo entre su máximo valor absoluto,
-    de tal forma que todos los elementos queden en el rango [-1, 1].
-
-    ¿POR QUÉ ES IMPORTANTE?
-    Los polinomios de Zernike (ISO 10110-5) están definidos únicamente dentro del 
-    círculo unitario de radio 1. Si los datos no están normalizados a [-1, 1], 
-    el algoritmo falla.
-    """
-    # 1. Caso Normal: Vector con valores positivos, negativos y ceros
-    v_entrada = np.array([2.0, -4.0, 1.0, 0.0]) # El valor absoluto máximo es |-4.0| = 4.0
+    """Valida la normalización de vectores al rango [-1, 1] dividiendo entre el máximo absoluto."""
+    v_entrada = np.array([2.0, -4.0, 1.0, 0.0])
     v_obtenido = normalizar_vector(v_entrada)
     
-    # Comprobamos que el máximo absoluto del resultado sea exactamente 1.0
     assert np.max(np.abs(v_obtenido)) == 1.0
     
-    # Comprobamos que cada elemento haya sido dividido por 4.0: [2/4, -4/4, 1/4, 0/4]
     v_esperado = np.array([0.5, -1.0, 0.25, 0.0])
     assert np.allclose(v_obtenido, v_esperado)
 
-    # 2. Caso Límite: Vector de ceros (no debe causar división por cero)
     v_ceros = np.zeros(5)
     assert np.array_equal(normalizar_vector(v_ceros), v_ceros)
 
 
 def test_parsear_ecuacion_z_valid():
-    """
-    OBJETIVO: Probar `parsear_ecuacion_z(expr_str)` con entradas matemáticas VÁLIDAS.
-    
-    ¿QUÉ DEBE HACER?
-    Convertir una cadena de texto (ej. "3*x*y + 2*x") en una funcion
- ejecutable 
-    de Python utilizando el evaluador seguro AST.
-
-    ¿CÓMO LO PROBAMOS?
-    Pasamos distintas ecuaciones escritas en texto, las convertimos a funciones 
-    y evaluamos en puntos (x, y) específicos comparando contra el resultado exacto.
-    """
-    # 1. Ecuación polinómica simple: "3*x*y + 2*x"
+    """Prueba la conversión de cadenas de texto matemáticas en funciones ejecutables seguras usando AST."""
     func1 = parsear_ecuacion_z("3*x*y + 2*x")
-    # Para (x=1.0, y=2.0) -> 3*(1)*(2) + 2*(1) = 6 + 2 = 8
     assert func1(1.0, 2.0) == 8.0
 
-    # 2. Ecuación trigonométrica: "sin(x) + cos(y)"
     func2 = parsear_ecuacion_z("sin(x) + cos(y)")
-    # Para (x=0.0, y=0.0) -> sin(0) + cos(0) = 0 + 1 = 1
     assert np.isclose(func2(0.0, 0.0), 1.0)
 
-    # 3. Raíz cuadrada y potencias: "sqrt(x^2 + y^2)"
     func3 = parsear_ecuacion_z("sqrt(x^2 + y^2)")
-    # Para (x=3.0, y=4.0) -> sqrt(9 + 16) = sqrt(25) = 5
     assert np.isclose(func3(3.0, 4.0), 5.0)
 
-    # 4. Resta de cuadrados: "y**2 - x**2"
     func4 = parsear_ecuacion_z("y**2 - x**2")
-    # Para (x=2.0, y=3.0) -> 3^2 - 2^2 = 9 - 4 = 5
     assert np.isclose(func4(2.0, 3.0), 5.0)
 
-    # 5. Producto bilineal: "2*x*y"
     func5 = parsear_ecuacion_z("2*x*y")
-    # Para (x=3.0, y=4.0) -> 2 * 3 * 4 = 24
     assert np.isclose(func5(3.0, 4.0), 24.0)
 
-    # 6. Polinomio de 3er orden complejo pedido por el usuario
     expr6 = "-y - 1.5*y*y*y + 1.5*x*x*y + x*y*y - 0.33*x*x*x + 2*x*x + 2*y*y + 0.5*x - 1"
     func6 = parsear_ecuacion_z(expr6)
     x_test, y_test = 0.5, -0.5
@@ -107,61 +50,33 @@ def test_parsear_ecuacion_z_valid():
 
 
 def test_parsear_ecuacion_z_invalid():
-    """
-    OBJETIVO: Probar el sistema de SEGURIDAD de `parsear_ecuacion_z(expr_str)`.
-    
-    ¿QUÉ DEBE HACER?
-    Rechazar activamente expresiones mal formadas, variables desconocidas o 
-    intentos de inyección de código peligroso, lanzando excepciones `ValueError`.
-    """
-    # Ecuación vacía o con espacios -> Debe retornar None
+    """Verifica que el parser AST seguro rechace expresiones mal formadas o variables no autorizadas."""
     assert parsear_ecuacion_z("   ") is None
 
-    # Error de sintaxis (operador doble sin sentido " + * ")
     with pytest.raises(ValueError):
         parsear_ecuacion_z("3 * x + * y")
 
-    # Intento de usar variable no autorizada 'z' (solo se permiten 'x' e 'y')
     with pytest.raises(ValueError):
         func = parsear_ecuacion_z("x + y + z")
         func(1, 1)
 
-    # Intento de ataque/inyección de funcion
-    # no autorizada ('eval' u 'os.system')
     with pytest.raises(ValueError):
         func = parsear_ecuacion_z("eval('1+1')")
         func(1, 1)
 
 
 def test_descomponer_aberraciones():
-    """
-    OBJETIVO: Probar la funcion
- `descomponer_aberraciones(A)`.
-    
-    ¿QUÉ DEBE HACER?
-    Tomar el vector de coeficientes de Zernike A = [A1, A2, ..., A21] y 
-    mapear los índices específicos a los nombres de las aberraciones ópticas.
-    
-    Índices clave:
-    - A[0]: Piston
-    - A[1], A[2]: Tilt X, Tilt Y
-    - A[4]: Desenfoque (Defocus)
-    - A[5]: Astigmatismo 0°
-    - A[12]: Aberración Esférica de 3er orden
-    """
-    # Creamos un vector de 21 coeficientes en cero
+    """Comprueba el mapeo de coeficientes de Zernike a magnitudes de aberraciones ópticas de Seidel."""
     A = np.zeros(21)
-    A[0] = 0.5   # Piston = 0.5
-    A[1] = 1.0   # Tilt X = 1.0
-    A[2] = -1.0  # Tilt Y = -1.0  -> Tilt Total = sqrt(1^2 + (-1)^2) = sqrt(2) ≈ 1.414
-    A[4] = 0.75  # Defocus = 0.75
-    A[5] = 0.3   # Astigmatismo 0° = 0.3
-    A[12] = 0.1  # Esférica = 0.1
+    A[0] = 0.5
+    A[1] = 1.0
+    A[2] = -1.0
+    A[4] = 0.75
+    A[5] = 0.3
+    A[12] = 0.1
 
-    # Invocamos la descomposicion
     aberraciones = descomponer_aberraciones(A)
 
-    # Validamos que los campos del diccionario contengan los valores exactos asignados
     assert aberraciones['Piston'] == 0.5
     assert aberraciones['Tilt_X'] == 1.0
     assert aberraciones['Tilt_Y'] == -1.0
@@ -172,52 +87,32 @@ def test_descomponer_aberraciones():
 
 
 def test_filtrar_pupila_y_centrado():
-    """
-    OBJETIVO: Probar el centrado de coordenadas y el filtro de pupila circular.
-    
-    ¿QUÉ DEBE HACER?
-    1. `centrar_coordenadas`: Mover el origen (0,0) del sensor CCD a su centro geométrico.
-    2. `filtrar_pupila`: Conservar solo los puntos dentro del radio de la pupila 
-       y normalizar sus coordenadas a [-1, 1].
-    """
-    # 1. Crear una malla sintética de 10x10 píxeles
+    """Valida el centrado de coordenadas al origen geométrico y el filtrado circular por pupila unitaria."""
     N, M = 10, 10
     X_pix, Y_pix = np.meshgrid(np.arange(M), np.arange(N))
     X_flat, Y_flat = X_pix.flatten(), Y_pix.flatten()
     Z_flat = X_flat + Y_flat
 
-    # 2. Centrar coordenadas al origen óptico
     X_c, Y_c = centrar_coordenadas(X_flat, Y_flat, N, M)
     
-    # El promedio de coordenadas centradas en un sensor simétrico debe ser exactamente 0.0
     assert np.isclose(np.mean(X_c), 0.0)
     assert np.isclose(np.mean(Y_c), 0.0)
 
-    # 3. Filtrar con una pupila de diámetro = 6.0 px (Radio = 3.0 px)
     datos_pupila = filtrar_pupila(X_c, Y_c, Z_flat, diametro=6.0)
     
     assert datos_pupila['R'] == 3.0
-    # Todos los puntos dentro de la pupila normalizados deben ser <= 1.0 en módulo
     assert np.all(np.abs(datos_pupila['X_norm']) <= 1.0)
     assert np.all(np.abs(datos_pupila['Y_norm']) <= 1.0)
 
 
 def test_exportar_zemax_y_codev(tmp_path):
-    """
-    OBJETIVO: Probar la exportación de archivos a formatos estándar (Zemax OpticStudio y CODE V).
-
-    ¿QUÉ PROBAMOS?
-    1. Que las funciones generen los archivos en la ruta especificada.
-    2. Que el archivo de Zemax contenga los encabezados requeridos (PUPIL_RADIUS_MM, WAVELENGTH_UM).
-    3. Que el archivo de CODE V contenga la cabecera e instrucciones de superficie (NRAD, ZFR).
-    """
+    """Valida la generación de archivos de exportación a Zemax OpticStudio (.zrn) y CODE V (.dat)."""
     from lib.io import exportar_zemax, exportar_codev
 
     A_test = np.zeros(21)
-    A_test[1] = 0.0267  # Tilt X
-    A_test[3] = 1.0012  # Astigmatismo
+    A_test[1] = 0.0267
+    A_test[3] = 1.0012
 
-    # 1. Probar Zemax (.zrn)
     file_zemax = tmp_path / "test_zemax.zrn"
     ok_zemax = exportar_zemax(A_test, R_pupila=50.0, longitud_onda=0.6328, filepath=str(file_zemax))
     assert ok_zemax is True
@@ -228,7 +123,6 @@ def test_exportar_zemax_y_codev(tmp_path):
     assert "PUPIL_RADIUS_MM      50.000000" in contenido_zemax
     assert "NUM_COEFFICIENTS     21" in contenido_zemax
 
-    # 2. Probar CODE V (.dat)
     file_codev = tmp_path / "test_codev.dat"
     ok_codev = exportar_codev(A_test, R_pupila=50.0, filepath=str(file_codev))
     assert ok_codev is True

@@ -21,7 +21,7 @@ INFORMACION_ZERNIKE = {info["r"]: info for info in INFORMACION_ZERNIKE_ISO}
 
 class ZernikeViewer3DDialog(Base3DPlotDialog):
     """
-    Cuadro de dialogo modular para explorar en 3D cualquiera de los 21 Polinomios de Zernike.
+    explorar en 3D cualquiera de los 21 Polinomios de Zernike.
     """
     def __init__(self, resultado_zernike=None, parent=None):
         self.resultado_zernike = resultado_zernike

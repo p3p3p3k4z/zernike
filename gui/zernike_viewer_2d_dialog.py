@@ -1,9 +1,9 @@
 """
 gui/zernike_viewer_2d_dialog.py
 ===============================
-Módulo de cuadro de diálogo interactivo para visualizar en 2D (mapa de calor y líneas de nivel)
+Modulo interactivo para visualizar en 2D (mapa de calor y lineas de nivel)
 cada uno de los 21 Polinomios de Zernike (ISO 10110-5, Grado k=5) de forma individual.
-Comparte la misma arquitectura, catálogo de información y controles de navegación del Visor 3D.
+Comparte la misma arquitectura, catalogo de informacion y controles de navegacion del Visor 3D.
 """
 
 import numpy as np
@@ -20,9 +20,7 @@ from lib.visualizacion import mapa_zernike_2d
 
 
 class ZernikeViewer2DDialog(QDialog):
-    """
-    Cuadro de diálogo modular para explorar en 2D cualquiera de los 21 Polinomios de Zernike.
-    """
+    """Cuadro de dialogo modular para explorar en 2D cualquiera de los 21 Polinomios de Zernike."""
     def __init__(self, resultado_zernike=None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Visor 2D de Polinomios de Zernike (ISO 10110-5 / 21 Polinomios)")
@@ -40,7 +38,7 @@ class ZernikeViewer2DDialog(QDialog):
         self._construir_ui()
 
     def showEvent(self, event):
-        """Renderiza el primer gráfico 2D una vez que la ventana es visible y dimensionada."""
+        """Renderiza el primer grafico 2D una vez que la ventana es visible y dimensionada."""
         super().showEvent(event)
         QTimer.singleShot(50, self._actualizar_grafico_2d)
 
@@ -59,7 +57,6 @@ class ZernikeViewer2DDialog(QDialog):
         layout_base.setContentsMargins(8, 8, 8, 8)
         layout_base.setSpacing(8)
 
-        # 1. Fila de navegación: Icono Izquierda | ComboBox Polinomios | Icono Derecha
         layout_nav = QHBoxLayout()
 
         self.btn_anterior = QPushButton()
@@ -86,7 +83,6 @@ class ZernikeViewer2DDialog(QDialog):
 
         layout_base.addLayout(layout_nav)
 
-        # 2. ControlBar2D
         self.control_bar = ControlBar2D(self)
         self.control_bar.cambio_modo.connect(lambda m: self._actualizar_grafico_2d())
         self.control_bar.cambio_franjas.connect(lambda f: self._actualizar_grafico_2d())
@@ -95,11 +91,9 @@ class ZernikeViewer2DDialog(QDialog):
         self.control_bar.cambio_grid.connect(lambda g: self._actualizar_grafico_2d())
         layout_base.addWidget(self.control_bar)
 
-        # 3. MplCanvasWidget Persistente
         self.canvas = MplCanvasWidget(self)
         layout_base.addWidget(self.canvas, stretch=1)
 
-        # 4. Etiqueta de información al pie
         self.lbl_info = QLabel()
         self.lbl_info.setAlignment(Qt.AlignCenter)
         self.lbl_info.setStyleSheet("font-size: 12px; padding: 4px 8px;")
@@ -108,12 +102,12 @@ class ZernikeViewer2DDialog(QDialog):
         self._actualizar_estado_botones()
 
     def _actualizar_estado_botones(self):
-        """Habilita o deshabilita los botones de navegación según los límites r=1 y r=21."""
+        """Habilita o deshabilita los botones de navegacion segun los limites r=1 y r=21."""
         self.btn_anterior.setEnabled(self.r_actual > 1)
         self.btn_siguiente.setEnabled(self.r_actual < 21)
 
     def _ir_a_polinomio(self, r: int):
-        """Navega al polinomio r (1..21) actualizando el combo y el gráfico de forma atómica."""
+        """Navega al polinomio r (1..21) actualizando el combo y el grafico de forma atomica."""
         self.r_actual = r
         self._bloqueando_combo = True
         self.combo_polinomio.setCurrentIndex(r - 1)
@@ -149,7 +143,7 @@ class ZernikeViewer2DDialog(QDialog):
         show_contours = self.control_bar.chk_contours.isChecked()
         show_grid = self.control_bar.chk_grid.isChecked()
 
-        tag_modo = f"Interferograma N={n_franjas:.1f}λ" if modo_render == "interferograma" else "Elevación de Fase"
+        tag_modo = f"Interferograma N={n_franjas:.1f}λ" if modo_render == "interferograma" else "Elevacion de Fase"
         titulo_fig = f"Polinomio r={self.r_actual:02d}: {info['nombre']} [{tag_modo}]"
         fig = mapa_zernike_2d(
             self.X_grid, self.Y_grid, Z_poly,
@@ -163,7 +157,6 @@ class ZernikeViewer2DDialog(QDialog):
 
         self.canvas.set_figure(fig)
 
-        # Actualizar etiqueta inferior con fórmula y coeficiente
         coef_texto = ""
         if self.resultado_zernike is not None and hasattr(self.resultado_zernike, 'A'):
             A_val = self.resultado_zernike.A[self.r_actual - 1]

@@ -1,6 +1,6 @@
 [project]
 name = "zernike-ortogonal"
-version = "0.1.0"
+version = "1.1.0"
 description = "Ajuste de superficies ópticas con polinomios ortogonales de Zernike (ISO 10110-5)"
 readme = "README.md"
 license = { text = "MIT" }

@@ -13,7 +13,26 @@ import subprocess
 import platform
 
 
-VERSION = "1.0.1"
+import re
+
+
+def _obtener_version() -> str:
+    """Obtiene la versión del proyecto desde la variable de entorno o pyproject.toml."""
+    if "VERSION" in os.environ:
+        return os.environ["VERSION"].lstrip("v")
+    try:
+        pyproject_path = os.path.join(os.path.dirname(__file__), "pyproject.toml")
+        if os.path.exists(pyproject_path):
+            with open(pyproject_path, "r", encoding="utf-8") as f:
+                match = re.search(r'version\s*=\s*"([^"]+)"', f.read())
+                if match:
+                    return match.group(1)
+    except Exception:
+        pass
+    return "1.1.0"
+
+
+VERSION = _obtener_version()
 APP_NAME = "zernike-gui"
 DEB_DIR_NAME = f"{APP_NAME}_{VERSION}_amd64"
 

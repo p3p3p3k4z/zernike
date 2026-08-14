@@ -463,8 +463,52 @@ def aplicar_estilo_rms_card(card_rms, lbl_titulo, lbl_rms, lbl_desc, tema="claro
         lbl_rms.setStyleSheet("font-size: 14px; font-weight: bold; color: #1D4ED8;")
         lbl_desc.setStyleSheet("font-size: 11px; color: #475569;")
     else:
-        # Nord Theme Card (#3B4252 / Nord1, Nord8 Ice Blue, Nord9 Glacier Blue)
         card_rms.setStyleSheet("background-color: #3B4252; border: 1px solid #4C566A; border-radius: 6px; padding: 10px;")
         lbl_titulo.setStyleSheet("font-size: 12px; font-weight: bold; color: #88C0D0;")
         lbl_rms.setStyleSheet("font-size: 14px; font-weight: bold; color: #81A1C1;")
         lbl_desc.setStyleSheet("font-size: 11px; color: #D8DEE9;")
+
+
+def obtener_paleta_tema(tema="claro") -> dict:
+    """Devuelve un diccionario centralizado con la paleta de colores y tokens visuales del tema."""
+    if tema == "oscuro":
+        return {
+            "bg": "#2E3440",
+            "fg": "#ECEFF4",
+            "card_bg": "#3B4252",
+            "border": "#4C566A",
+            "header_bg": "#2E3440",
+            "header_fg": "#88C0D0",
+            "input_bg": "#2E3440",
+            "input_fg": "#ECEFF4",
+            "empty_bg": "#2E3440",
+            "empty_border": "#4C566A",
+            "accent": "#88C0D0",
+            "accent_secondary": "#81A1C1",
+            "code_bg": "#2E3440",
+            "code_color": "#88C0D0",
+            "hr_color": "#4C566A",
+            "body_color": "#D8DEE9",
+            "h2_color": "#88C0D0",
+            "h3_color": "#81A1C1",
+        }
+    return {
+        "bg": "#F8FAFC",
+        "fg": "#0F172A",
+        "card_bg": "#FFFFFF",
+        "border": "#CBD5E1",
+        "header_bg": "#EFF6FF",
+        "header_fg": "#1E3A8A",
+        "input_bg": "#FFFFFF",
+        "input_fg": "#0F172A",
+        "empty_bg": "#F8FAFC",
+        "empty_border": "#CBD5E1",
+        "accent": "#1E3A8A",
+        "accent_secondary": "#1D4ED8",
+        "code_bg": "#F1F5F9",
+        "code_color": "#1E3A8A",
+        "hr_color": "#CBD5E1",
+        "body_color": "#0F172A",
+        "h2_color": "#1E3A8A",
+        "h3_color": "#1E40AF",
+    }

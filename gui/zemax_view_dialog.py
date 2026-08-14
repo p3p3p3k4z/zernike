@@ -1,16 +1,4 @@
-"""
-gui/zemax_view_dialog.py
-========================
-Cuadro de diálogo modular que replica fielmente la vista estándar de "Zernike Polynomials"
-de Zemax OpticStudio / MetroPro.
-
-Incluye:
-  - Panel izquierdo 'Quick Fit' (Irregularity, Power, RMS, Peak-to-Valley, Points).
-  - Pestaña 'Zernike Data' con la fila superior (Piston, Focus, Y Tilt, X Tilt, Terms).
-  - Matriz de términos agrupados en columnas por órdenes de aberración (3rd, 5th, 7th, 9th, 11th).
-  - Pestaña 'Reference' con vista previa de sintaxis Zemax (.zrn) y CODE V (.dat).
-  - Recálculo interactivo en tiempo real de métricas al modificar coeficientes.
-"""
+"""Cuadro de dialogo interactivo que replica la interfaz estandar de 'Zernike Polynomials' de Zemax OpticStudio."""
 
 import numpy as np
 from PySide6.QtWidgets import (
@@ -22,9 +10,7 @@ from PySide6.QtCore import Qt
 
 
 class ZemaxViewDialog(QDialog):
-    """
-    Ventana flotante de análisis con diseño e interfaz idéntica a Zemax OpticStudio.
-    """
+    """Ventana flotante de analisis con diseno e interfaz identica a Zemax OpticStudio."""
     def __init__(self, resultado_zernike=None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Zernike Polynomials — Vista Modo Zemax OpticStudio")
@@ -37,28 +23,19 @@ class ZemaxViewDialog(QDialog):
         self.coeficientes = np.zeros(21)
         self.bloqueando_senales = False
 
-        # Configuración de paleta adaptativa (Tema Claro vs Oscuro)
+        from gui.styles import obtener_paleta_tema
         self.es_oscuro = getattr(parent, 'tema_actual', 'claro') == 'oscuro'
-        if self.es_oscuro:
-            self.c_bg = "#1e293b"
-            self.c_fg = "#f8fafc"
-            self.c_input_bg = "#334155"
-            self.c_input_fg = "#f8fafc"
-            self.c_border = "#475569"
-            self.c_header_bg = "#475569"
-            self.c_header_fg = "#f8fafc"
-            self.c_empty_bg = "#1e293b"
-            self.c_empty_border = "#334155"
-        else:
-            self.c_bg = "#ffffff"
-            self.c_fg = "#0f172a"
-            self.c_input_bg = "#f1f5f9"
-            self.c_input_fg = "#0f172a"
-            self.c_border = "#cbd5e1"
-            self.c_header_bg = "#cbd5e1"
-            self.c_header_fg = "#0f172a"
-            self.c_empty_bg = "#cbd5e1"
-            self.c_empty_border = "#94a3b8"
+        paleta = obtener_paleta_tema("oscuro" if self.es_oscuro else "claro")
+
+        self.c_bg = paleta["card_bg"]
+        self.c_fg = paleta["fg"]
+        self.c_input_bg = paleta["input_bg"]
+        self.c_input_fg = paleta["input_fg"]
+        self.c_border = paleta["border"]
+        self.c_header_bg = paleta["header_bg"]
+        self.c_header_fg = paleta["header_fg"]
+        self.c_empty_bg = paleta["empty_bg"]
+        self.c_empty_border = paleta["empty_border"]
 
         self._construir_ui()
         if self.resultado is not None:
@@ -71,9 +48,6 @@ class ZemaxViewDialog(QDialog):
         layout_principal.setContentsMargins(10, 10, 10, 10)
         layout_principal.setSpacing(12)
 
-        # ---------------------------------------------------------------------
-        # 1. PANEL IZQUIERDO: Botones superiores y Cuadro 'Quick Fit'
-        # ---------------------------------------------------------------------
         panel_izquierdo = QVBoxLayout()
         panel_izquierdo.setSpacing(10)
 
@@ -90,14 +64,13 @@ class ZemaxViewDialog(QDialog):
         panel_izquierdo.addWidget(btn_split)
 
         btn_order = QPushButton("Set Order")
-        btn_order.setToolTip("Configura el número máximo de términos de Zernike a evaluar (1..21).")
+        btn_order.setToolTip("Configura el numero maximo de terminos de Zernike a evaluar (1..21).")
         btn_order.setStyleSheet("padding: 6px 12px; font-weight: bold;")
         btn_order.clicked.connect(self._al_hacer_clic_set_order)
         panel_izquierdo.addWidget(btn_order)
 
         panel_izquierdo.addSpacing(10)
 
-        # GroupBox Quick Fit con dimensiones ampliadas y legibilidad mejorada
         group_fit = QGroupBox("Quick Fit")
         group_fit.setStyleSheet(
             f"QGroupBox {{ font-weight: bold; font-size: 13px; border: 2px solid {self.c_border}; border-radius: 6px; margin-top: 6px; padding-top: 10px; color: {self.c_fg}; }} "
@@ -135,9 +108,6 @@ class ZemaxViewDialog(QDialog):
 
         layout_principal.addLayout(panel_izquierdo, stretch=0)
 
-        # ---------------------------------------------------------------------
-        # 2. ÁREA PRINCIPAL: Panel de Datos de Zernike (Zernike Data)
-        # ---------------------------------------------------------------------
         group_data = QGroupBox("Zernike Polynomials")
         group_data.setStyleSheet(
             f"QGroupBox {{ font-weight: bold; font-size: 13px; border: 2px solid {self.c_border}; border-radius: 6px; margin-top: 6px; padding-top: 10px; color: {self.c_fg}; }} "
@@ -148,7 +118,6 @@ class ZemaxViewDialog(QDialog):
         layout_data.setContentsMargins(10, 12, 10, 10)
         layout_data.setSpacing(10)
 
-        # Fila superior de aberraciones fundamentales (Piston, Focus, Y Tilt, X Tilt, Terms)
         layout_top_bar = QHBoxLayout()
         layout_top_bar.setSpacing(12)
 
@@ -170,24 +139,21 @@ class ZemaxViewDialog(QDialog):
         self.spin_terms.setRange(1, 21)
         self.spin_terms.setValue(21)
         self.spin_terms.setStyleSheet(f"background-color: {self.c_input_bg}; color: {self.c_input_fg}; font-weight: bold; border: 1px solid {self.c_border}; border-radius: 3px; padding: 3px;")
-        self.spin_terms.setToolTip("Número de términos de Zernike activos (ISO 10110-5).")
+        self.spin_terms.setToolTip("Numero de terminos de Zernike activos (ISO 10110-5).")
         self.spin_terms.valueChanged.connect(self._al_cambiar_terms)
         layout_top_bar.addWidget(lbl_terms)
         layout_top_bar.addWidget(self.spin_terms)
 
         layout_data.addLayout(layout_top_bar)
 
-        # Separador horizontal
         line_sep = QFrame()
         line_sep.setFrameShape(QFrame.HLine)
         line_sep.setFrameShadow(QFrame.Sunken)
         layout_data.addWidget(line_sep)
 
-        # Matriz por Órdenes (3rd, 5th, 7th, 9th, 11th)
         self.grid_matrix = QGridLayout()
         self.grid_matrix.setSpacing(4)
 
-        # Encabezados de columnas de orden
         headers_orden = ["3rd", "5th", "7th", "9th", "11th"]
         for col_idx, h_text in enumerate(headers_orden, start=1):
             lbl_h = QLabel(h_text)
@@ -195,7 +161,6 @@ class ZemaxViewDialog(QDialog):
             lbl_h.setStyleSheet(f"font-weight: bold; background-color: {self.c_header_bg}; color: {self.c_header_fg}; padding: 4px; border-radius: 3px;")
             self.grid_matrix.addWidget(lbl_h, 0, col_idx)
 
-        # Etiquetas laterales de aberraciones (izquierda y derecha)
         nombres_aberraciones = [
             "Spherical", "Y Coma", "X Coma", "45° Astig", "0° Astig",
             "0° Tri", "30° Tri", "22.5° Quad", "0° Quad",
@@ -213,31 +178,25 @@ class ZemaxViewDialog(QDialog):
             lbl_r.setStyleSheet(f"color: {self.c_fg}; font-size: 11px;")
             self.grid_matrix.addWidget(lbl_r, row_idx, 6)
 
-        # Diccionario de mapeo de celda (col_idx 1..5, row_idx 1..13) -> índice Zernike (1..21)
         self.mapeo_celda_zernike = {
-            # Column 1 (3rd Order)
-            (1, 1): 13,  # Spherical 3rd (A13)
-            (1, 2): 9,   # Y Coma 3rd (A9)
-            (1, 3): 8,   # X Coma 3rd (A8)
-            (1, 4): 4,   # 45° Astig (A4)
-            (1, 5): 6,   # 0° Astig (A6)
-            # Column 2 (5th Order)
-            (2, 1): 19,  # Secondary Spherical (A19)
-            (2, 2): 18,  # Secondary Y Coma (A18)
-            (2, 3): 17,  # Secondary X Coma (A17)
-            (2, 4): 12,  # Secondary 45° Astig (A12)
-            (2, 5): 14,  # Secondary 0° Astig (A14)
-            (2, 6): 10,  # 0° Tri (A10)
-            (2, 7): 7,   # 30° Tri (A7)
-            # Column 3 (7th Order)
-            (3, 8): 11,  # 22.5° Quad (A11)
-            (3, 9): 15,  # 0° Quad (A15)
-            # Column 4 (9th Order)
-            (4, 10): 16, # 18° Penta (A16)
-            (4, 11): 20, # 0° Penta (A20)
-            # Column 5 (11th Order)
-            (5, 12): 17, # 15° Hex / r=17
-            (5, 13): 21, # 0° Hex (A21)
+            (1, 1): 13,
+            (1, 2): 9,
+            (1, 3): 8,
+            (1, 4): 4,
+            (1, 5): 6,
+            (2, 1): 19,
+            (2, 2): 18,
+            (2, 3): 17,
+            (2, 4): 12,
+            (2, 5): 14,
+            (2, 6): 10,
+            (2, 7): 7,
+            (3, 8): 11,
+            (3, 9): 15,
+            (4, 10): 16,
+            (4, 11): 20,
+            (5, 12): 17,
+            (5, 13): 21,
         }
 
         self.dict_spins_matriz = {}
@@ -251,7 +210,6 @@ class ZemaxViewDialog(QDialog):
                     self.dict_spins_matriz[r_idx] = spin
                     self.grid_matrix.addWidget(spin, row_idx, col_idx)
                 else:
-                    # Celda inactiva / fondo gris adaptativo estilo Zemax
                     lbl_empty = QLabel()
                     lbl_empty.setStyleSheet(f"background-color: {self.c_empty_bg}; border: 1px inset {self.c_empty_border};")
                     self.grid_matrix.addWidget(lbl_empty, row_idx, col_idx)
@@ -259,9 +217,6 @@ class ZemaxViewDialog(QDialog):
         layout_data.addLayout(self.grid_matrix)
         layout_data.addStretch()
 
-        # ---------------------------------------------------------------------
-        # 3. BOTONES INFERIORES: Exportar / Cerrar
-        # ---------------------------------------------------------------------
         layout_bottom = QHBoxLayout()
 
         btn_exp_zemax = QPushButton("Exportar a Zemax (.zrn)")
@@ -320,13 +275,11 @@ class ZemaxViewDialog(QDialog):
             self.bloqueando_senales = True
             self.coeficientes = np.array(resultado.A, dtype=float)
 
-            # Poblar Piston, Focus, Tilts
-            self.txt_piston.setValue(self.coeficientes[0])   # r=1
-            self.txt_xtilt.setValue(self.coeficientes[1])    # r=2
-            self.txt_ytilt.setValue(self.coeficientes[2])    # r=3
-            self.txt_focus.setValue(self.coeficientes[4])    # r=5
+            self.txt_piston.setValue(self.coeficientes[0])
+            self.txt_xtilt.setValue(self.coeficientes[1])
+            self.txt_ytilt.setValue(self.coeficientes[2])
+            self.txt_focus.setValue(self.coeficientes[4])
 
-            # Poblar matriz
             for r_idx, spin in self.dict_spins_matriz.items():
                 if r_idx <= len(self.coeficientes):
                     spin.setValue(self.coeficientes[r_idx - 1])
@@ -383,11 +336,11 @@ class ZemaxViewDialog(QDialog):
         self._recalcular_quick_fit()
 
     def _al_hacer_clic_delete(self):
-        """Acción del botón Delete: pregunta al usuario y limpia todos los coeficientes a cero."""
+        """Accion del boton Delete: pregunta al usuario y limpia todos los coeficientes a cero."""
         reply = QMessageBox.question(
             self,
             "Delete / Limpiar Coeficientes",
-            "¿Deseas restablecer a cero todos los coeficientes de Zernike (1..21)?",
+            "Deseas restablecer a cero todos los coeficientes de Zernike (1..21)?",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No
         )
@@ -395,7 +348,7 @@ class ZemaxViewDialog(QDialog):
             self._limpiar_coeficientes()
 
     def _al_hacer_clic_split(self):
-        """Acción del botón Split: descompone el frente de onda en componentes Seidel vs Alto Orden."""
+        """Accion del boton Split: descompone el frente de onda en componentes Seidel vs Alto Orden."""
         terms_activos = self.spin_terms.value()
         A_active = self.coeficientes[:terms_activos]
 
@@ -404,20 +357,20 @@ class ZemaxViewDialog(QDialog):
         total_rms = np.sqrt(np.sum(A_active[1:]**2)) if len(A_active) > 1 else 0.0
 
         msg = (
-            "<b>Descomposición de Fase (Split Component Analysis — Estilo Zemax):</b><br><br>"
+            "<b>Descomposicion de Fase (Split Component Analysis — Estilo Zemax):</b><br><br>"
             f"• <b>Aberraciones Primarias de Seidel (3er Orden A2..A9):</b> RMS = {seidel_rms:.4f} λ<br>"
             f"• <b>Aberraciones de Alto Orden (5to+ Orden A10..A21):</b> RMS = {high_order_rms:.4f} λ<br>"
             f"• <b>Error RMS Global Total (excluyendo Piston):</b> {total_rms:.4f} λ"
         )
-        QMessageBox.information(self, "Split — Descomposición de Fase", msg)
+        QMessageBox.information(self, "Split — Descomposicion de Fase", msg)
 
     def _al_hacer_clic_set_order(self):
-        """Acción del botón Set Order: abre un diálogo modal para configurar el número máximo de términos activos."""
+        """Accion del boton Set Order: abre un dialogo modal para configurar el numero maximo de terminos activos."""
         from PySide6.QtWidgets import QInputDialog
         num_terms, ok = QInputDialog.getInt(
             self,
-            "Set Order / Número de Términos Activos",
-            "Selecciona el número máximo de términos de Zernike a evaluar (1 a 21):",
+            "Set Order / Numero de Terminos Activos",
+            "Selecciona el numero maximo de terminos de Zernike a evaluar (1 a 21):",
             value=self.spin_terms.value(),
             minValue=1, maxValue=21, step=1
         )
@@ -425,22 +378,19 @@ class ZemaxViewDialog(QDialog):
             self.spin_terms.setValue(num_terms)
 
     def _recalcular_quick_fit(self):
-        """Recalcula dinámicamente las métricas de Quick Fit (RMS, P-V, Irregularity, Power)."""
+        """Recalcula dinamicamente las metricas de Quick Fit (RMS, P-V, Irregularity, Power)."""
         terms_activos = self.spin_terms.value()
         A_active = self.coeficientes[:terms_activos]
 
-        # 1. Power (Defoco A5)
         power_val = A_active[4] if len(A_active) >= 5 else 0.0
         self.txt_power.setText(f"{power_val:.3f}")
 
-        # 2. RMS Global sin Piston: RMS = sqrt(sum(A_r^2)) para r=2..N
         if len(A_active) > 1:
             rms_val = np.sqrt(np.sum(A_active[1:]**2))
         else:
             rms_val = 0.0
         self.txt_rms.setText(f"{rms_val:.3f}")
 
-        # 3. Irregularity: RMS / P-V de aberraciones de alto orden (excluyendo Piston r=1, Tilts r=2,3 y Focus r=5)
         indices_alto_orden = [i for i in range(len(A_active)) if i not in (0, 1, 2, 4)]
         if indices_alto_orden:
             irregularity_val = np.sqrt(np.sum(A_active[indices_alto_orden]**2))
@@ -448,7 +398,6 @@ class ZemaxViewDialog(QDialog):
             irregularity_val = 0.0
         self.txt_irregularity.setText(f"{irregularity_val:.3f}")
 
-        # 4. Peak-to-Valley estimado (Aproximación de diferencia máxima acumulada)
         pv_val = 2.0 * np.sum(np.abs(A_active[1:])) if len(A_active) > 1 else 0.0
         self.txt_pv.setText(f"{pv_val:.3f}")
 
@@ -456,33 +405,49 @@ class ZemaxViewDialog(QDialog):
             self.txt_points.setText("4513")
 
     def _exportar_zemax(self):
+        from PySide6.QtWidgets import QFileDialog
         from lib.io import exportar_zemax
-        res_tmp = self._crear_resultado_temporal()
-        ok = exportar_zemax(res_tmp, "output/zemax_export_modo_zemax.zrn")
-        if ok:
-            QMessageBox.information(self, "Exportación Exitosa", "Archivo Zemax OpticStudio generado en 'output/zemax_export_modo_zemax.zrn'.")
+        filepath, _ = QFileDialog.getSaveFileName(
+            self,
+            "Exportar Coeficientes a Zemax OpticStudio",
+            "output/zemax_zernike.zrn",
+            "Archivos Zemax (*.zrn *.txt)"
+        )
+        if filepath:
+            res_tmp = self._crear_resultado_temporal()
+            ok = exportar_zemax(res_tmp, filepath=filepath)
+            if ok:
+                QMessageBox.information(self, "Exportación Exitosa", f"Archivo Zemax OpticStudio guardado en:\n{filepath}")
 
     def _exportar_codev(self):
+        from PySide6.QtWidgets import QFileDialog
         from lib.io import exportar_codev
-        res_tmp = self._crear_resultado_temporal()
-        ok = exportar_codev(res_tmp, "output/codev_export_modo_zemax.dat")
-        if ok:
-            QMessageBox.information(self, "Exportación Exitosa", "Archivo CODE V generado en 'output/codev_export_modo_zemax.dat'.")
+        filepath, _ = QFileDialog.getSaveFileName(
+            self,
+            "Exportar Coeficientes a CODE V",
+            "output/codev_zernike.dat",
+            "Archivos CODE V (*.dat *.txt)"
+        )
+        if filepath:
+            res_tmp = self._crear_resultado_temporal()
+            ok = exportar_codev(res_tmp, filepath=filepath)
+            if ok:
+                QMessageBox.information(self, "Exportación Exitosa", f"Archivo CODE V guardado en:\n{filepath}")
 
     def _exportar_reporte_html_dialog(self):
         from PySide6.QtWidgets import QFileDialog
         from lib.reportes import exportar_reporte_html
         filepath, _ = QFileDialog.getSaveFileName(
             self,
-            "Exportar Reporte Metrológico (HTML)",
+            "Exportar Reporte Metrologico (HTML)",
             "output/reporte_metrologico_zemax.html",
             "Archivos HTML (*.html)"
         )
         if filepath:
             res_tmp = self._crear_resultado_temporal()
-            ok = exportar_reporte_html(res_tmp, filepath, titulo="Reporte Metrológico (Modo Zemax OpticStudio)")
+            ok = exportar_reporte_html(res_tmp, filepath, titulo="Reporte Metrologico (Modo Zemax OpticStudio)")
             if ok:
-                QMessageBox.information(self, "Reporte HTML Generado", f"Reporte metrológico HTML generado con éxito en:\n{filepath}")
+                QMessageBox.information(self, "Reporte HTML Generado", f"Reporte metrologico HTML generado con exito en:\n{filepath}")
 
     def _crear_resultado_temporal(self):
         from lib.zernike import ResultadoZernike

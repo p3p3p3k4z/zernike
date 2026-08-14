@@ -27,7 +27,7 @@ _COL = {
 }
 
 def generar_eventos(L):
-    """Genera la secuencia exacta de cálculo de la base recursiva de polinomios de Zernike (U, V, D, B)."""
+    """Genera la secuencia exacta de calculo de la base recursiva de polinomios de Zernike (U, V, D, B)."""
     events = []
     
     # 1. Evaluar Base Zernike U
@@ -169,7 +169,7 @@ def graficar_flujo_zernike(resultados, intervalo_ms=180, repetir=False):
 def graficar_distribucion_ccd(
     X_c: np.ndarray,
     Y_c: np.ndarray,
-) -> plt.Figure:
+) -> Figure:
     """
     Plano cartesiano simple con todos los puntos de los 4 cuadrantes
     antes de aplicar el filtro de la pupila.
@@ -178,7 +178,8 @@ def graficar_distribucion_ccd(
     ----------
     X_c, Y_c : ndarray -- coordenadas de todos los puntos
     """
-    fig, ax = plt.subplots(figsize=(6, 6))
+    fig = Figure(figsize=(6, 6))
+    ax = fig.add_subplot(111)
 
     ax.scatter(X_c, Y_c, c=_COL['B'], s=14, alpha=0.75, linewidths=0)
 
@@ -191,7 +192,7 @@ def graficar_distribucion_ccd(
     ax.set_aspect('equal')
     ax.grid(True, alpha=0.25)
 
-    plt.tight_layout()
+    fig.tight_layout()
     return fig
 
 
@@ -200,7 +201,7 @@ def graficar_pupila(
     Y_c: np.ndarray,
     mascara: np.ndarray,
     R: float,
-) -> plt.Figure:
+) -> Figure:
     """
     Plano cartesiano con puntos coloreados segun si caen dentro (verde)
     o fuera (rojo) de la pupila, con el circulo de la pupila dibujado.
@@ -211,7 +212,8 @@ def graficar_pupila(
     mascara  : ndarray bool -- True si el punto esta dentro de la pupila
     R        : float        -- radio de la pupila
     """
-    fig, ax = plt.subplots(figsize=(6, 6))
+    fig = Figure(figsize=(6, 6))
+    ax = fig.add_subplot(111)
 
     n_tot = len(X_c)
     if n_tot > 6000:
@@ -232,7 +234,7 @@ def graficar_pupila(
         label=f'Dentro ({mascara.sum()})',
     )
 
-    circulo = plt.Circle(
+    circulo = mpatches.Circle(
         (0, 0), R,
         color=_COL['D'], fill=False, linewidth=2.0,
         label=f'Pupila  R={R:.1f}',
@@ -249,7 +251,7 @@ def graficar_pupila(
     ax.set_aspect('equal')
     ax.grid(True, alpha=0.25)
 
-    plt.tight_layout()
+    fig.tight_layout()
     return fig
 
 
@@ -352,10 +354,13 @@ def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_
         Zi = Zi_smooth
 
     # 5. Renderizar superficie continua o malla de alambre
-    if wireframe:
-        surf = ax.plot_wireframe(Xi, Yi, Zi, rstride=2, cstride=2, cmap=cmap, linewidth=0.6, alpha=0.9)
-    else:
-        surf = ax.plot_surface(Xi, Yi, Zi, cmap=cmap, linewidth=0, antialiased=True, alpha=0.85, rstride=1, cstride=1)
+    import warnings
+    with np.errstate(all='ignore'), warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        if wireframe:
+            surf = ax.plot_wireframe(Xi, Yi, Zi, rstride=2, cstride=2, cmap=cmap, linewidth=0.6, alpha=0.9)
+        else:
+            surf = ax.plot_surface(Xi, Yi, Zi, cmap=cmap, linewidth=0, antialiased=True, alpha=0.85, rstride=1, cstride=1)
 
     fig.colorbar(surf, shrink=0.5, aspect=10, pad=0.1, label='Magnitud Z')
 
@@ -372,10 +377,7 @@ def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_
     return fig
 
 
-# =============================================================================
 # FUNCIONES DE VISUALIZACION PARA LAS 4 ETAPAS DE INTERFEROMETRIA
-# =============================================================================
-
 def graficar_interferograma_original(matriz_img: np.ndarray, is_dark: bool = False) -> Figure:
     """
     Etapa 1: Grafica la imagen original del interferograma en escala de grises.
@@ -588,29 +590,10 @@ def mapa_zernike_2d(
     return fig
 
 
-# Paleta de 21 Colores Golosina Vivos, Distintivos y Únicos para Z_1..Z_21
 COLORES_GOLOSINA_21 = [
-    '#FF4757',  # Z1: Rojo Coral Golosina
-    '#FF7F50',  # Z2: Coral Cálido
-    '#FFA502',  # Z3: Naranja Caramelo
-    '#FFD700',  # Z4: Amarillo Oro Vivo
-    '#FFDD00',  # Z5: Amarillo Limón Vivo
-    '#A3CB38',  # Z6: Verde Manzana Candy
-    '#2ED573',  # Z7: Verde Menta Golosina
-    '#00D2D3',  # Z8: Turquesa Neón
-    '#1E90FF',  # Z9: Azul Eléctrico Golosina
-    '#3742FA',  # Z10: Azul Uva Neón
-    '#5F27CD',  # Z11: Púrpura Golosina
-    '#8E44AD',  # Z12: Morado Ciruela
-    '#E040FB',  # Z13: Magenta Golosina Vivo
-    '#FF007F',  # Z14: Fucsia Chicle
-    '#FF1E56',  # Z15: Rojo Frambuesa
-    '#FF6B6B',  # Z16: Rojo Sandía Candy
-    '#FF9FF3',  # Z17: Rosa Chicle Pastel
-    '#00E676',  # Z18: Verde Esmeralda Neón
-    '#00B894',  # Z19: Verde Menta Neón
-    '#00CEC9',  # Z20: Cian Pastel Golosina
-    '#74B9FF',  # Z21: Azul Cielo Candy
+    '#FF4757', '#FF7F50', '#FFA502', '#FFD700', '#FFDD00', '#A3CB38', '#2ED573',
+    '#00D2D3', '#1E90FF', '#3742FA', '#5F27CD', '#8E44AD', '#E040FB', '#FF007F',
+    '#FF1E56', '#FF6B6B', '#FF9FF3', '#00E676', '#00B894', '#00CEC9', '#74B9FF',
 ]
 
 

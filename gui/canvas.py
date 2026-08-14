@@ -20,9 +20,7 @@ class SafeFigureCanvas(FigureCanvas):
     producidos al ocultar, mover o redimensionar ventanas en i3wm / X11 / Wayland.
     """
     def resizeEvent(self, event):
-        # En i3wm o gestores de mosaico, al ocultar o cambiar de espacio de trabajo,
-        # las dimensiones del widget pueden reducirse a 0x0 o desmapearse en X11.
-        if self.width() <= 1 or self.height() <= 1 or not self.isVisible():
+        if self.width() <= 1 or self.height() <= 1:
             return
         try:
             super().resizeEvent(event)
@@ -30,8 +28,7 @@ class SafeFigureCanvas(FigureCanvas):
             pass
 
     def paintEvent(self, event):
-        # Previene que Matplotlib intente pintar en un buffer de memoria de tamaño 0 o desmapeado
-        if self.width() <= 1 or self.height() <= 1 or not self.isVisible():
+        if self.width() <= 1 or self.height() <= 1:
             return
         try:
             super().paintEvent(event)
@@ -48,7 +45,6 @@ class MplCanvasWidget(QWidget):
 
         self.figure = Figure(figsize=(width, height), dpi=dpi)
         self.canvas = SafeFigureCanvas(self.figure)
-        # Permitir que el canvas se expanda completamente para llenar el espacio de la pestaña en QTabWidget
         self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.toolbar = NavigationToolbar(self.canvas, self)
 
@@ -63,17 +59,21 @@ class MplCanvasWidget(QWidget):
         """Retorna un tamaño sugerido estable para evitar variaciones de geometría."""
         return QSize(640, 480)
 
+    def showEvent(self, event):
+        """Al mostrar el widget (ej: al cambiar de pestaña), redibujar con rescalado."""
+        super().showEvent(event)
+        QTimer.singleShot(0, self._redibujar_con_rescalado)
+
     def clear(self):
         """Limpia los ejes de la figura y actualiza de forma asíncrona."""
         self.figure.clear()
-        if self.isVisible() and self.width() > 1 and self.height() > 1:
+        if self.width() > 1 and self.height() > 1:
             self.canvas.draw_idle()
 
     def _rescalar_figura_al_canvas(self, fig):
         """
-        Ajusta las dimensiones internas de la figura de Matplotlib al tamanio real
+        Ajusta las dimensiones internas de la figura de Matplotlib al tamaño real
         actual del canvas de PySide6.
-        Evita que figuras con figsize absoluto (ej: 10x8 pulgadas) desborden el widget.
         """
         w = self.canvas.width()
         h = self.canvas.height()
@@ -84,46 +84,35 @@ class MplCanvasWidget(QWidget):
     def set_figure(self, fig):
         """
         Reemplaza la figura en el lienzo de forma segura sin destruir QWidgets.
-        Usa QTimer.singleShot(0) para diferir el redibujo al siguiente ciclo de eventos
-        de Qt, garantizando que el layout del QTabWidget haya calculado las dimensiones
-        finales del contenedor antes de que Matplotlib renderice.
         """
         if fig is None:
             return
 
-        # Si es la misma figura, simplemente programar un redibujo diferido
         if self.figure == fig:
             QTimer.singleShot(0, self._redibujar_si_visible)
             return
 
-        # Cerrar la figura previa en pyplot para liberar memoria
         if self.figure is not None and self.figure != fig:
             try:
                 plt.close(self.figure)
             except Exception:
                 pass
 
-        # Vincular la nueva figura al lienzo persistente de PySide6
         self.figure = fig
         self.canvas.figure = self.figure
         self.figure.set_canvas(self.canvas)
 
-        # Actualizar la barra de herramientas de navegación
         if hasattr(self, 'toolbar') and self.toolbar is not None:
             self.toolbar.canvas = self.canvas
             self.toolbar.update()
 
-        # Diferir el redibujo al siguiente ciclo de eventos de Qt.
-        # Esto garantiza que el widget ya tenga sus dimensiones finales asignadas
-        # por el layout manager antes de que Matplotlib intente renderizar.
         QTimer.singleShot(0, self._redibujar_con_rescalado)
 
     def _redibujar_con_rescalado(self):
         """
-        Rescala la figura al tamanio real del canvas y solicita un redibujo.
-        Llamada de forma diferida desde QTimer para respetar el ciclo de layout de Qt.
+        Rescala la figura al tamaño real del canvas y solicita un redibujo.
         """
-        if not self.isVisible() or self.width() <= 1 or self.height() <= 1:
+        if self.width() <= 1 or self.height() <= 1:
             return
         try:
             self._rescalar_figura_al_canvas(self.figure)
@@ -132,9 +121,10 @@ class MplCanvasWidget(QWidget):
             pass
 
     def _redibujar_si_visible(self):
-        """Solicita un redibujo simple si el canvas tiene dimensiones validas."""
-        if self.isVisible() and self.width() > 1 and self.height() > 1:
+        """Solicita un redibujo simple si el canvas tiene dimensiones válidas."""
+        if self.width() > 1 and self.height() > 1:
             try:
                 self.canvas.draw_idle()
             except Exception:
                 pass
+

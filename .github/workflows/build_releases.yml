@@ -139,12 +139,12 @@ jobs:
             
             ### Debian / Ubuntu / Linux Mint (`.deb`)
             ```bash
-            sudo dpkg -i zernike-gui_1.0.0_amd64.deb
+            sudo dpkg -i zernike-gui_*_amd64.deb
             ```
             
             ### Fedora / RHEL / CentOS / AlmaLinux (`.rpm`)
             ```bash
-            sudo dnf install ./zernike-gui-1.0.0-1.x86_64.rpm
+            sudo dnf install ./zernike-gui-*.x86_64.rpm
             ```
             
             ### Linux Binario Genérico (Cualquier distribución Linux)
