@@ -17,14 +17,10 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QGuiApplication, QKeySequence, QAction
 
 from lib.matriz import descomponer_aberraciones
+from lib.zernike import INFORMACION_ZERNIKE_ISO
 from gui.styles import aplicar_estilo_rms_card
 
-_ZERNIKE_DESCRIPCIONES_ISO = [
-    "Pistón", "Tilt X", "Tilt Y", "Astigmatismo 45°", "Defocus", "Astigmatismo 0°",
-    "Trefoil X", "Coma X", "Coma Y", "Trefoil Y", "Tetrafoil X", "Astigmatismo 2° 45°",
-    "Aberración Esférica 3er Ord", "Astigmatismo 2° 0°", "Tetrafoil Y", "Pentafoil X",
-    "Trefoil 2° X", "Coma 2° X", "Coma 2° Y", "Trefoil 2° Y", "Pentafoil Y"
-]
+_ZERNIKE_DESCRIPCIONES_ISO = [info["nombre"] for info in INFORMACION_ZERNIKE_ISO]
 
 
 class CustomTableWidget(QTableWidget):

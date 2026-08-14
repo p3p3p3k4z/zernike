@@ -159,10 +159,17 @@ Permite explorar individualmente en 2D cualquiera de los 21 polinomios de Zernik
 
 Incorpora la barra de herramientas `ControlBar2D` con ajuste interactivo de la densidad de franjas $N_\lambda$ ($0.5 \dots 10.0\lambda$), paletas cromáticas (por defecto en escala de grises `gray`), contornos y cuadrícula.
 
-### 5.5. Gestor de Presets e Historial (`PresetManagerDialog`)
+### 5.5. Vista Estilo Zemax OpticStudio (`ZemaxViewDialog`)
+Ventana de análisis flotante e independiente accesible desde el **Menú Ver** (`Ctrl+Shift+X`) que replica de forma idéntica la interfaz gráfica estándar de Zemax OpticStudio / MetroPro:
+- **Panel Izquierdo `Quick Fit`**: Reporta en tiempo real métricas globales como *Irregularity*, *Power* ($A_5$), *RMS*, *Peak-to-Valley (P-V)* y número de puntos $N$.
+- **Pestaña `Zernike Data`**: Fila superior con Piston ($A_1$), Focus ($A_5$), Y Tilt ($A_3$), X Tilt ($A_2$), selector de número de términos activos `Terms: [ 21 ]`, y matriz organizada por columnas de orden ($n=3, 5, 7, 9, 11$).
+- **Edición Inversa**: Permite modificar cualquier coeficiente manualmente para simular superficies hipotéticas y recalcular dinámicamente el cuadro `Quick Fit`.
+- **Pestaña `Reference`**: Muestra la vista previa del encabezado y sintaxis en formato Zemax OpticStudio (`.zrn`) y CODE V (`.dat`).
+
+### 5.6. Gestor de Presets e Historial (`PresetManagerDialog`)
 Permite guardar expresiones matemáticas personalizadas, etiquetarlas y consultar el registro de ecuaciones evaluadas recientemente.
 
-### 5.6. Diálogo Flotante de Error Residual 3D (`ErrorResidual3DDialog`)
+### 5.7. Diálogo Flotante de Error Residual 3D (`ErrorResidual3DDialog`)
 Permite desanclar el mapa de error residual 3D a una ventana flotante no modal para comparar visualmente superficies mientras se modifican parámetros en el panel principal.
 
 ---

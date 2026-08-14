@@ -13,33 +13,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 from gui.components.base_3d_dialog import Base3DPlotDialog
-from lib.zernike import polinomios_zernike
+from lib.zernike import INFORMACION_ZERNIKE_ISO, polinomios_zernike
 from lib.visualizacion import mapa_fase_3d
 
-
-INFORMACION_ZERNIKE = {
-    1:  {"nombre": "Piston", "n": 0, "m": 0, "formula": "1"},
-    2:  {"nombre": "Tilt X (Inclinacion Horizontal)", "n": 1, "m": 1, "formula": "x"},
-    3:  {"nombre": "Tilt Y (Inclinacion Vertical)", "n": 1, "m": -1, "formula": "y"},
-    4:  {"nombre": "Astigmatismo 45 Grados", "n": 2, "m": 2, "formula": "2*x*y"},
-    5:  {"nombre": "Defocus (Desenfoque / Esferica 2do Orden)", "n": 2, "m": 0, "formula": "-1 + 2*y^2 + 2*x^2"},
-    6:  {"nombre": "Astigmatismo 0 Grados", "n": 2, "m": -2, "formula": "y^2 - x^2"},
-    7:  {"nombre": "Trefoil Y (Aberracion Triangular)", "n": 3, "m": 3, "formula": "3*x*y^2 - x^3"},
-    8:  {"nombre": "Coma X (Aberracion Comatica Horizontal)", "n": 3, "m": 1, "formula": "-2*x + 3*x*y^2 + 3*x^3"},
-    9:  {"nombre": "Coma Y (Aberracion Comatica Vertical)", "n": 3, "m": -1, "formula": "-2*y + 3*y^3 + 3*x^2*y"},
-    10: {"nombre": "Trefoil X (Aberracion Triangular)", "n": 3, "m": -3, "formula": "y^3 - 3*x^2*y"},
-    11: {"nombre": "Quadrafoil Y (Aberracion de 4to Orden)", "n": 4, "m": 4, "formula": "4*y^3*x - 4*x^3*y"},
-    12: {"nombre": "Astigmatismo de 2do Orden Y", "n": 4, "m": 2, "formula": "-6*x*y + 8*y^3*x + 8*x^3*y"},
-    13: {"nombre": "Aberracion Esferica Primaria (4to Orden)", "n": 4, "m": 0, "formula": "1 - 6*y^2 - 6*x^2 + 6*y^4 + 12*x^2*y^2 + 6*x^4"},
-    14: {"nombre": "Astigmatismo de 2do Orden X", "n": 4, "m": -2, "formula": "-3*y^2 + 3*x^2 + 4*y^4 - 4*x^4"},
-    15: {"nombre": "Quadrafoil X (Aberracion de 4to Orden)", "n": 4, "m": -4, "formula": "y^4 - 6*x^2*y^2 + x^4"},
-    16: {"nombre": "Pentafoil Y (Aberracion de 5to Orden)", "n": 5, "m": 5, "formula": "5*x*y^4 - 10*x^3*y^2 + x^5"},
-    17: {"nombre": "Trefoil de 2do Orden Y", "n": 5, "m": 3, "formula": "-12*x*y^2 + 4*x^3 + 15*x*y^4 + 10*x^3*y^2 - 5*x^5"},
-    18: {"nombre": "Coma de 2do Orden X", "n": 5, "m": 1, "formula": "3*x - 12*x*y^2 - 12*x^3 + 10*x*y^4 + 20*x^3*y^2 + 10*x^5"},
-    19: {"nombre": "Coma de 2do Orden Y", "n": 5, "m": -1, "formula": "3*y - 12*y^3 - 12*x^2*y + 10*y^5 + 20*x^2*y^3 + 10*x^4*y"},
-    20: {"nombre": "Trefoil de 2do Orden X", "n": 5, "m": -3, "formula": "-4*y^3 + 12*x^2*y + 5*y^5 - 10*x^2*y^3 - 15*x^4*y"},
-    21: {"nombre": "Pentafoil X (Aberracion de 5to Orden)", "n": 5, "m": -5, "formula": "y^5 - 10*x^2*y^3 + 5*x^4*y"},
-}
+INFORMACION_ZERNIKE = {info["r"]: info for info in INFORMACION_ZERNIKE_ISO}
 
 
 class ZernikeViewer3DDialog(Base3DPlotDialog):

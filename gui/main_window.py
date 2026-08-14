@@ -580,6 +580,48 @@ class ZernikeZemaxMainWindow(QMainWindow):
         
         self.status_bar.showMessage("Visualizando el interferograma sintético en ventana flotante.", 3000)
 
+    def _mostrar_espectro_aberraciones_flotante(self):
+        """Muestra la gráfica de la Distribución de Aberraciones por Coeficiente de Zernike (21 Colores Golosina) en una ventana flotante independiente."""
+        if self.ultimo_resultado is None:
+            QMessageBox.information(
+                self,
+                "Sin Ajuste Disponible",
+                "Primero debes realizar un ajuste de Zernike para visualizar el espectro de aberraciones."
+            )
+            return
+
+        from PySide6.QtWidgets import QDialog, QVBoxLayout
+        from gui.canvas import MplCanvasWidget
+        from gui.styles import obtener_estilo_tema
+        from lib.visualizacion import graficar_espectro_aberraciones
+
+        es_oscuro = (self.tema_actual == 'oscuro')
+        fig = graficar_espectro_aberraciones(
+            self.ultimo_resultado.A,
+            is_dark=es_oscuro,
+            title="Distribución de Aberraciones por Coeficiente de Zernike (ISO 10110-5)",
+            annotate_values=True
+        )
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Distribución de Aberraciones de Zernike (Espectro A1..A21)")
+        dialog.resize(850, 480)
+
+        layout = QVBoxLayout(dialog)
+        canvas = MplCanvasWidget(dialog)
+        canvas.set_figure(fig)
+        layout.addWidget(canvas)
+
+        css = obtener_estilo_tema(self.tema_actual)
+        dialog.setStyleSheet(css)
+        dialog.show()
+
+        if not hasattr(self, '_dialogs_espectro'):
+            self._dialogs_espectro = []
+        self._dialogs_espectro.append(dialog)
+
+        self.status_bar.showMessage("Visualizando la distribución de aberraciones en ventana flotante.", 3000)
+
     def _ir_a_pestana_interferograma_sintetico(self):
         """Conmuta directamente a la Pestaña 4 (Interferograma Sintético)."""
         self.tabs.setCurrentIndex(3)
@@ -640,6 +682,16 @@ class ZernikeZemaxMainWindow(QMainWindow):
         W_fit = self.ultimo_resultado.W_fit
         self._dialog_3d = mostrar_ventana_3d_error_residual(X_in, Y_in, W_in, W_fit, parent=self)
         self.status_bar.showMessage("Gráfico 3D de Error Residual con panel de controles desplegado en ventana flotante.")
+
+    def _mostrar_vista_modo_zemax(self):
+        """Abre la ventana interactiva flotante idéntica a Zemax OpticStudio con Quick Fit y matriz de coeficientes."""
+        from gui.zemax_view_dialog import ZemaxViewDialog
+        if hasattr(self, '_dialog_zemax_view') and self._dialog_zemax_view is not None and self._dialog_zemax_view.isVisible():
+            self._dialog_zemax_view.close()
+
+        self._dialog_zemax_view = ZemaxViewDialog(resultado_zernike=self.ultimo_resultado, parent=self)
+        self._dialog_zemax_view.show()
+        self.status_bar.showMessage("Vista Estilo Zemax OpticStudio (Quick Fit & Coeficientes) desplegada.")
 
     def _mostrar_visor_polinomios_2d(self):
         """Abre el visor 2D interactivo para explorar de forma individual los 21 Polinomios de Zernike."""
@@ -797,6 +849,23 @@ class ZernikeZemaxMainWindow(QMainWindow):
         if filepath:
             exportar_codev(self.ultimo_resultado.A, filepath=filepath)
             QMessageBox.information(self, "Exportación Exitosa", f"Archivo CODE V guardado en:\n{filepath}")
+
+    def _generar_reporte_html_manual(self):
+        """Diálogo de exportación manual para el Reporte Metrológico de Calidad Óptica en HTML."""
+        if self.ultimo_resultado is None:
+            QMessageBox.warning(self, "Sin Ajuste", "Primero debes ejecutar un ajuste de Zernike para generar el reporte metrológico.")
+            return
+        filepath, _ = QFileDialog.getSaveFileName(
+            self,
+            "Exportar Reporte Metrológico (HTML)",
+            "output/reporte_metrologico_zernike.html",
+            "Archivos HTML (*.html)"
+        )
+        if filepath:
+            from lib.reportes import exportar_reporte_html
+            ok = exportar_reporte_html(self.ultimo_resultado, filepath, titulo="Reporte Metrológico de Calidad Óptica")
+            if ok:
+                QMessageBox.information(self, "Reporte HTML Generado", f"Reporte metrológico HTML generado exitosamente en:\n{filepath}")
 
     def _seleccionar_archivo_csv(self):
         """Delega la seleccion del archivo CSV al panel de parametros."""

@@ -193,3 +193,7 @@ def exportar_codev(A, R_pupila=1.0, filepath='output/codev_zernike.dat'):
         return False
 
 
+from lib.reportes import exportar_reporte_html
+
+
+

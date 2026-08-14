@@ -9,6 +9,7 @@ Modulos:
 
 from .zernike import (
     ResultadoZernike,
+    INFORMACION_ZERNIKE_ISO,
     polinomios_zernike,
     evaluar_polinomios,
     construir_base_ortogonal,
@@ -46,11 +47,13 @@ from .io import (
     exportar_datos_iniciales_csv,
     exportar_zemax,
     exportar_codev,
+    exportar_reporte_html,
 )
 
 __all__ = [
     # zernike
     "ResultadoZernike",
+    "INFORMACION_ZERNIKE_ISO",
     "polinomios_zernike",
     "evaluar_polinomios",
     "construir_base_ortogonal",
@@ -75,6 +78,8 @@ __all__ = [
     "graficar_flujo_zernike",
     "mapa_fase_3d",
     "mapa_zernike_2d",
+    "graficar_espectro_aberraciones",
+    "COLORES_GOLOSINA_21",
     # io
     "inicializar_logger",
     "exportar_resultados_csv",
@@ -82,4 +87,5 @@ __all__ = [
     "exportar_datos_iniciales_csv",
     "exportar_zemax",
     "exportar_codev",
+    "exportar_reporte_html",
 ]

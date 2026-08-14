@@ -52,6 +52,14 @@ class AppMenuBar(QMenuBar):
         menu_archivo.addAction(act_exp_codev)
 
         menu_archivo.addSeparator()
+
+        act_exp_html = QAction("Generar Reporte Metrológico (HTML)...", self)
+        act_exp_html.setShortcut(QKeySequence("Ctrl+Shift+H"))
+        act_exp_html.setStatusTip("Genera y guarda un reporte técnico de calidad óptica en formato HTML5 autocontenido")
+        act_exp_html.triggered.connect(self.controller._generar_reporte_html_manual)
+        menu_archivo.addAction(act_exp_html)
+
+        menu_archivo.addSeparator()
         act_salir = QAction("Salir", self)
         act_salir.setShortcut(QKeySequence("Ctrl+Q"))
         act_salir.triggered.connect(self.controller.close)
@@ -89,6 +97,12 @@ class AppMenuBar(QMenuBar):
         act_visor_zernike.setStatusTip("Explora de forma individual cada uno de los 21 Polinomios de Zernike en 3D")
         act_visor_zernike.triggered.connect(self.controller._mostrar_visor_polinomios_3d)
         menu_herramientas.addAction(act_visor_zernike)
+
+        act_espectro = QAction("Distribución de Aberraciones de Zernike", self)
+        act_espectro.setShortcut(QKeySequence("Ctrl+Shift+E"))
+        act_espectro.setStatusTip("Muestra en una ventana flotante la gráfica de barras de la distribución de aberraciones")
+        act_espectro.triggered.connect(self.controller._mostrar_espectro_aberraciones_flotante)
+        menu_herramientas.addAction(act_espectro)
 
         menu_herramientas.addSeparator()
 
@@ -145,6 +159,19 @@ class AppMenuBar(QMenuBar):
         act_sintetico.setStatusTip("Genera el patrón de interferencia sintético 2D a partir del frente de onda ajustado")
         act_sintetico.triggered.connect(self.controller._mostrar_interferograma_sintetico)
         menu_graficas.addAction(act_sintetico)
+
+        act_espectro_flotante = QAction("Distribución de Aberraciones por Coeficiente (21 Colores)", self)
+        act_espectro_flotante.setStatusTip("Abre en una ventana flotante la gráfica de la distribución de aberraciones de Zernike (A1..A21)")
+        act_espectro_flotante.triggered.connect(self.controller._mostrar_espectro_aberraciones_flotante)
+        menu_graficas.addAction(act_espectro_flotante)
+
+        menu_ver.addSeparator()
+
+        act_zemax_modo = QAction("Vista Estilo Zemax OpticStudio (Zernike Data & Quick Fit)...", self)
+        act_zemax_modo.setShortcut(QKeySequence("Ctrl+Shift+X"))
+        act_zemax_modo.setStatusTip("Abre la ventana interactiva idéntica a Zemax OpticStudio con Quick Fit y matriz de coeficientes por orden")
+        act_zemax_modo.triggered.connect(self.controller._mostrar_vista_modo_zemax)
+        menu_ver.addAction(act_zemax_modo)
 
         menu_ver.addSeparator()
 

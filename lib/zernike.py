@@ -45,6 +45,32 @@ class ResultadoZernike(NamedTuple):
         return default
 
 
+# Metadata metrológica ISO 10110-5 / ANSI Z80.28 de los 21 Polinomios de Zernike (Grado k=5, L=21)
+INFORMACION_ZERNIKE_ISO = [
+    {"r": 1,  "n": 0, "m":  0, "nombre": "Piston", "formula": "1"},
+    {"r": 2,  "n": 1, "m":  1, "nombre": "Tilt X (Inclinación X)", "formula": "x"},
+    {"r": 3,  "n": 1, "m": -1, "nombre": "Tilt Y (Inclinación Y)", "formula": "y"},
+    {"r": 4,  "n": 2, "m":  2, "nombre": "Astigmatismo 45°", "formula": "2*x*y"},
+    {"r": 5,  "n": 2, "m":  0, "nombre": "Defocus (Desenfoque / Power)", "formula": "-1 + 2*y^2 + 2*x^2"},
+    {"r": 6,  "n": 2, "m": -2, "nombre": "Astigmatismo 0°", "formula": "y^2 - x^2"},
+    {"r": 7,  "n": 3, "m":  3, "nombre": "Trefoil X (30°)", "formula": "3*x*y^2 - x^3"},
+    {"r": 8,  "n": 3, "m":  1, "nombre": "Coma X", "formula": "-2*x + 3*x*y^2 + 3*x^3"},
+    {"r": 9,  "n": 3, "m": -1, "nombre": "Coma Y", "formula": "-2*y + 3*y^3 + 3*x^2*y"},
+    {"r": 10, "n": 3, "m": -3, "nombre": "Trefoil Y (0°)", "formula": "y^3 - 3*x^2*y"},
+    {"r": 11, "n": 4, "m":  4, "nombre": "Tetrafoil X (22.5°)", "formula": "4*y^3*x - 4*x^3*y"},
+    {"r": 12, "n": 4, "m":  2, "nombre": "Astigmatismo Secundario 45°", "formula": "-6*x*y + 8*y^3*x + 8*x^3*y"},
+    {"r": 13, "n": 4, "m":  0, "nombre": "Aberración Esférica (3er Orden)", "formula": "1 - 6*y^2 - 6*x^2 + 6*y^4 + 12*x^2*y^2 + 6*x^4"},
+    {"r": 14, "n": 4, "m": -2, "nombre": "Astigmatismo Secundario 0°", "formula": "-3*y^2 + 3*x^2 + 4*y^4 - 4*x^4"},
+    {"r": 15, "n": 4, "m": -4, "nombre": "Tetrafoil Y (0°)", "formula": "y^4 - 6*x^2*y^2 + x^4"},
+    {"r": 16, "n": 5, "m":  5, "nombre": "Pentafoil X (18°)", "formula": "5*x*y^4 - 10*x^3*y^2 + x^5"},
+    {"r": 17, "n": 5, "m":  3, "nombre": "Trefoil Secundario X", "formula": "-12*x*y^2 + 4*x^3 + 15*x*y^4 + 10*x^3*y^2 - 5*x^5"},
+    {"r": 18, "n": 5, "m":  1, "nombre": "Coma Secundaria X", "formula": "3*x - 12*x*y^2 - 12*x^3 + 10*x*y^4 + 20*x^3*y^2 + 10*x^5"},
+    {"r": 19, "n": 5, "m": -1, "nombre": "Coma Secundaria Y", "formula": "3*y - 12*y^3 - 12*x^2*y + 10*y^5 + 20*x^2*y^3 + 10*x^4*y"},
+    {"r": 20, "n": 5, "m": -3, "nombre": "Trefoil Secundario Y", "formula": "-4*y^3 + 12*x^2*y + 5*y^5 - 10*x^2*y^3 - 15*x^4*y"},
+    {"r": 21, "n": 5, "m": -5, "nombre": "Pentafoil Y (0°)", "formula": "y^5 - 10*x^2*y^3 + 5*x^4*y"},
+]
+
+
 def polinomios_zernike():
     """
     Retorna una lista de 21 funciones lambda que representan los

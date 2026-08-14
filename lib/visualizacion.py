@@ -588,5 +588,86 @@ def mapa_zernike_2d(
     return fig
 
 
+# Paleta de 21 Colores Golosina Vivos, Distintivos y Únicos para Z_1..Z_21
+COLORES_GOLOSINA_21 = [
+    '#FF4757',  # Z1: Rojo Coral Golosina
+    '#FF7F50',  # Z2: Coral Cálido
+    '#FFA502',  # Z3: Naranja Caramelo
+    '#FFD700',  # Z4: Amarillo Oro Vivo
+    '#FFDD00',  # Z5: Amarillo Limón Vivo
+    '#A3CB38',  # Z6: Verde Manzana Candy
+    '#2ED573',  # Z7: Verde Menta Golosina
+    '#00D2D3',  # Z8: Turquesa Neón
+    '#1E90FF',  # Z9: Azul Eléctrico Golosina
+    '#3742FA',  # Z10: Azul Uva Neón
+    '#5F27CD',  # Z11: Púrpura Golosina
+    '#8E44AD',  # Z12: Morado Ciruela
+    '#E040FB',  # Z13: Magenta Golosina Vivo
+    '#FF007F',  # Z14: Fucsia Chicle
+    '#FF1E56',  # Z15: Rojo Frambuesa
+    '#FF6B6B',  # Z16: Rojo Sandía Candy
+    '#FF9FF3',  # Z17: Rosa Chicle Pastel
+    '#00E676',  # Z18: Verde Esmeralda Neón
+    '#00B894',  # Z19: Verde Menta Neón
+    '#00CEC9',  # Z20: Cian Pastel Golosina
+    '#74B9FF',  # Z21: Azul Cielo Candy
+]
+
+
+def graficar_espectro_aberraciones(
+    A_coefs: np.ndarray,
+    is_dark: bool = False,
+    title: str = "Distribución de Aberraciones por Coeficiente de Zernike (ISO 10110-5)",
+    annotate_values: bool = False
+) -> Figure:
+    """
+    Genera la gráfica de espectro de aberraciones de Zernike en barras de 21 colores golosina.
+    Usa Figure() directamente para evitar la creación de ventanas nativas vacías en ejecutables.
+    """
+    num_coef = len(A_coefs)
+    indices = np.arange(1, num_coef + 1)
+
+    bg_color = '#1e293b' if is_dark else '#ffffff'
+    text_color = '#f8fafc' if is_dark else '#0f172a'
+    title_color = '#93c5fd' if is_dark else '#1e3a8a'
+    grid_color = '#475569' if is_dark else '#cbd5e1'
+
+    fig = Figure(figsize=(8.5, 3.8), facecolor=bg_color)
+    ax = fig.add_subplot(111, facecolor=bg_color)
+
+    colores_barras = [COLORES_GOLOSINA_21[(r - 1) % len(COLORES_GOLOSINA_21)] for r in indices]
+    bars = ax.bar(indices, A_coefs, color=colores_barras, edgecolor=grid_color, linewidth=0.9, alpha=0.9)
+    ax.axhline(0, color=grid_color, linewidth=1, linestyle='--')
+
+    ax.set_title(title, fontsize=10, fontweight='bold', color=title_color)
+    ax.set_xlabel("Índice de Zernike (r)", fontsize=9, fontweight='bold', color=text_color)
+    ax.set_ylabel("Coeficiente A_r [λ]", fontsize=9, fontweight='bold', color=text_color)
+    ax.set_xticks(indices)
+    ax.set_xticklabels([f"Z_{r}" for r in indices], rotation=45, fontsize=7, fontweight='bold', color=text_color)
+    ax.tick_params(colors=text_color)
+    ax.grid(True, linestyle=':', alpha=0.5, color=grid_color)
+
+    if annotate_values:
+        for bar, val in zip(bars, A_coefs):
+            height = bar.get_height()
+            va = 'bottom' if height >= 0 else 'top'
+            y_pos = height + (0.003 if height >= 0 else -0.003)
+            ax.annotate(
+                f'{val:+.4f}',
+                xy=(bar.get_x() + bar.get_width() / 2, y_pos),
+                xytext=(0, 0),
+                textcoords="offset points",
+                ha='center', va=va,
+                fontsize=7, fontweight='bold', color=text_color
+            )
+
+    try:
+        fig.tight_layout()
+    except Exception:
+        pass
+    return fig
+
+
+
 
 
