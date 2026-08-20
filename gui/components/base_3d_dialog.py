@@ -39,6 +39,9 @@ class Base3DPlotDialog(QDialog):
         self.control_bar.cambio_modo_render.connect(self._al_cambiar_modo_render)
         self.control_bar.cambio_grid.connect(self._al_cambiar_grid)
         self.control_bar.cambio_suavizado.connect(lambda n, s: self._actualizar_grafico_3d())
+        # Conectar los nuevos controles de modo de vista y curvas de nivel.
+        self.control_bar.cambio_modo_vista.connect(lambda _modo_3d: self._actualizar_grafico_3d())
+        self.control_bar.cambio_contornos.connect(lambda _activo, _n: self._actualizar_grafico_3d())
         self.layout_base.addWidget(self.control_bar)
 
         # 2. MplCanvasWidget Persistente
@@ -77,6 +80,17 @@ class Base3DPlotDialog(QDialog):
         n_grid = self.control_bar.spin_n_grid.value()
         sigma = self.control_bar.spin_sigma.value()
         return n_grid, sigma
+
+    def _obtener_modo_vista(self) -> bool:
+        """Retorna True si la vista activa es 3D (superficie), False si es 2D (mapa de calor)."""
+        return not self.control_bar.btn_modo_vista.isChecked()
+
+    def _obtener_parametros_contornos(self) -> tuple:
+        """Retorna una tupla (show_contours, n_contour_levels) con los ajustes de curvas de nivel."""
+        return (
+            self.control_bar.chk_contornos.isChecked(),
+            self.control_bar.spin_n_contornos.value(),
+        )
 
     def _al_cambiar_camara(self, elev: int, azim: int):
         if hasattr(self.canvas.figure, 'axes') and len(self.canvas.figure.axes) > 0:

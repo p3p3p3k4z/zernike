@@ -155,6 +155,11 @@ class AppMenuBar(QMenuBar):
         act_3d_flotante.triggered.connect(self.controller._mostrar_grafica_3d_flotante)
         menu_graficas.addAction(act_3d_flotante)
 
+        act_2d_flotante = QAction("Mapa de Error Residual 2D", self)
+        act_2d_flotante.setStatusTip("Muestra el mapa bidimensional de calor del error residual con curvas de nivel")
+        act_2d_flotante.triggered.connect(self.controller._mostrar_grafica_2d_flotante)
+        menu_graficas.addAction(act_2d_flotante)
+
         act_sintetico = QAction("Sintetizar Interferograma Óptico desde Zernike", self)
         act_sintetico.setStatusTip("Genera el patrón de interferencia sintético 2D a partir del frente de onda ajustado")
         act_sintetico.triggered.connect(self.controller._mostrar_interferograma_sintetico)

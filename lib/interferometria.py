@@ -292,7 +292,13 @@ def generar_interferograma_sintetico(func_z: Callable[[np.ndarray, np.ndarray], 
     return interferograma, X_grid, Y_grid, Z_fase_teorica
 
 
-def sintetizar_interferograma_desde_zernike(A_coefs: np.ndarray, N: int = 256, franjas_carrier: int = 12, escala_opd: float = 2.0) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def sintetizar_interferograma_desde_zernike(
+    A_coefs: np.ndarray,
+    N: int = 256,
+    franjas_carrier: int = 12,
+    escala_opd: float = 2.0,
+    indices_activos: list = None,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Sintetiza un interferograma óptico realista 2D a partir del vector de coeficientes
     de Zernike A (ISO 10110-5) ajustados.
@@ -300,11 +306,23 @@ def sintetizar_interferograma_desde_zernike(A_coefs: np.ndarray, N: int = 256, f
     Modelado óptico físico:
     I(x,y) = a(x,y) + b(x,y) * cos( 2*pi * escala_opd * W_fit(x,y) + 2*pi * (fx*X + fy*Y) )
 
-    Retorna:
-    - interferograma: Matriz 2D de intensidad [0, 1]
-    - X_grid: Malla X [-1, 1]
-    - Y_grid: Malla Y [-1, 1]
-    - W_fit_2d: Mapa bidimensional del frente de onda ajustado
+    Parametros
+    ----------
+    A_coefs : np.ndarray
+        Vector de coeficientes Zernike ajustados (base 1, ISO 10110-5).
+    N : int
+        Resolucion de la grilla cuadrada (N x N pixeles).
+    franjas_carrier : int
+        Frecuencia portadora espacial en X (numero de franjas de inclinacion).
+    escala_opd : float
+        Factor de escala de la diferencia de camino optico (OPD).
+    indices_activos : list[int] | None
+        Indices base-1 de los terminos Zernike que deben contribuir al frente de onda.
+        Si es None, se usan todos los coeficientes (comportamiento completo).
+
+    Retorna
+    -------
+    interferograma, X_grid, Y_grid, W_fit_2d
     """
     from lib.zernike import polinomios_zernike, evaluar_polinomios, reconstruir_W
 
@@ -321,13 +339,22 @@ def sintetizar_interferograma_desde_zernike(A_coefs: np.ndarray, N: int = 256, f
     n_copy = min(len(A_coefs), L)
     A_full[:n_copy] = A_coefs[:n_copy]
 
+    # Aplicar mascara de contribucion selectiva: solo los indices elegidos permanecen activos.
+    if indices_activos is not None:
+        mascara = np.zeros(L, dtype=bool)
+        for idx in indices_activos:
+            k = idx - 1  # conversion de indice base-1 (ISO) a base-0 (array)
+            if 0 <= k < L:
+                mascara[k] = True
+        A_full *= mascara.astype(float)
+
     W_flat = reconstruir_W(A_full, U)
     W_fit_2d = W_flat.reshape((N, N))
 
-    # Fase de deformación óptica real: phi = 2*pi * escala_opd * W_fit
+    # Fase de deformacion optica real: phi = 2*pi * escala_opd * W_fit
     fase_optica = 2.0 * np.pi * escala_opd * W_fit_2d
 
-    # Frecuencia portadora realista (inclinación principal en X e inclinación secundaria en Y)
+    # Frecuencia portadora realista (inclinacion principal en X e inclinacion secundaria en Y)
     fx = franjas_carrier
     fy = franjas_carrier * 0.25
     fase_carrier = 2.0 * np.pi * (fx * X_grid + fy * Y_grid)

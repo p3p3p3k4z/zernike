@@ -37,6 +37,7 @@ from .matriz import (
 from .visualizacion import (
     graficar_flujo_zernike,
     mapa_fase_3d,
+    mapa_fase_2d,
     mapa_zernike_2d,
 )
 
@@ -77,6 +78,7 @@ __all__ = [
     # visualizacion
     "graficar_flujo_zernike",
     "mapa_fase_3d",
+    "mapa_fase_2d",
     "mapa_zernike_2d",
     "graficar_espectro_aberraciones",
     "COLORES_GOLOSINA_21",

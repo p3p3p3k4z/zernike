@@ -277,50 +277,23 @@ def _filtro_gaussiano_2d(Zi: np.ndarray, sigma: float) -> np.ndarray:
         return out
 
 
-def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_scale=1.0, wireframe=False, show_grid=True, n_grid=80, sigma=0.0):
-    """
-    Genera una representación gráfica tridimensional continua del mapa de fase o error residual (Z_exp - Z_fit) mediante interpolación en grilla regular y filtrado gaussiano opcional.
-    Se usa Figure() directamente para no registrar la figura en el gestor de pyplot (Gcf),
-    evitando la aparicion de una ventana nativa vacia (FigureManagerQT) en ejecutables Windows.
-    El figsize no se fija aqui: MplCanvasWidget.set_figure() ajusta la figura
-    al tamanio real del canvas tras el ciclo de layout de Qt.
-
-    Parametros
-    ----------
-    X_c, Y_c : np.ndarray
-        Coordenadas de la pupila.
-    Z_diff : np.ndarray
-        Valores de altura / amplitud del error residual.
-    title : str
-        Titulo del grafico.
-    cmap : str
-        Mapa de colores (colormap).
-    z_scale : float
-        Escala manual del eje vertical Z.
-    wireframe : bool
-        Si es True, renderiza como malla de alambre.
-    show_grid : bool
-        Si es True, muestra la cuadricula de los ejes 3D.
-    n_grid : int
-        Resolucion de la grilla regular de interpolacion (n_grid x n_grid).
-    sigma : float
-        Nivel de suavizado gaussiano (0.0 = sin suavizado).
-    """
-    fig = Figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-    Z_scaled = Z_diff * z_scale
-
-    # 1. Generar grilla cartesiana regular en el disco unitario [-1, 1]
+def _interpolar_a_grilla(
+    X_c: np.ndarray,
+    Y_c: np.ndarray,
+    Z: np.ndarray,
+    n_grid: int,
+    sigma: float,
+) -> tuple:
+    """Interpola datos dispersos sobre la pupila circular a una grilla regular N x N con suavizado opcional."""
     xi = np.linspace(-1.0, 1.0, n_grid)
     yi = np.linspace(-1.0, 1.0, n_grid)
     Xi, Yi = np.meshgrid(xi, yi)
 
-    # 2. Interpolar datos dispersos a la grilla regular (scipy cubic o matplotlib tri fallback)
+    # Intento con interpolacion cubica (scipy), fallback triangular, fallback nearest.
     Zi = None
     try:
         from scipy.interpolate import griddata
-        Zi = griddata((X_c, Y_c), Z_scaled, (Xi, Yi), method='cubic')
+        Zi = griddata((X_c, Y_c), Z, (Xi, Yi), method='cubic')
     except (ImportError, Exception):
         pass
 
@@ -328,7 +301,7 @@ def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_
         try:
             import matplotlib.tri as tri
             triang = tri.Triangulation(X_c, Y_c)
-            interpolator = tri.LinearTriInterpolator(triang, Z_scaled)
+            interpolator = tri.LinearTriInterpolator(triang, Z)
             Zi = interpolator(Xi, Yi)
         except Exception:
             pass
@@ -336,24 +309,73 @@ def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_
     if Zi is None or np.all(np.isnan(Zi)):
         try:
             from scipy.interpolate import griddata
-            Zi = griddata((X_c, Y_c), Z_scaled, (Xi, Yi), method='nearest')
+            Zi = griddata((X_c, Y_c), Z, (Xi, Yi), method='nearest')
         except (ImportError, Exception):
             pass
 
     if Zi is None or np.all(np.isnan(Zi)):
         Zi = np.zeros_like(Xi)
 
-    # 3. Aplicar mascara de pupila circular unitaria (rho <= 1.0)
+    # Enmascarar la region exterior a la pupila circular unitaria (rho > 1).
     mascara_pupila = (Xi**2 + Yi**2) > 1.0
     Zi[mascara_pupila] = np.nan
 
-    # 4. Aplicar filtro de suavizado gaussiano opcional
     if sigma > 0.0:
-        Zi_smooth = _filtro_gaussiano_2d(Zi, sigma)
-        Zi_smooth[mascara_pupila] = np.nan
-        Zi = Zi_smooth
+        Zi_suave = _filtro_gaussiano_2d(Zi, sigma)
+        Zi_suave[mascara_pupila] = np.nan
+        Zi = Zi_suave
 
-    # 5. Renderizar superficie continua o malla de alambre
+    return Xi, Yi, Zi
+
+
+def mapa_fase_3d(
+    X_c, Y_c, Z_diff,
+    title='Error Residual 3D',
+    cmap='viridis',
+    z_scale=1.0,
+    wireframe=False,
+    show_grid=True,
+    n_grid=80,
+    sigma=0.0,
+    show_contours=False,
+    n_contour_levels=10,
+):
+    """
+    Genera la representacion tridimensional del mapa de fase o error residual sobre la pupila circular,
+    con interpolacion en grilla regular, suavizado gaussiano opcional y curvas de nivel proyectadas.
+
+    Parametros
+    ----------
+    X_c, Y_c : np.ndarray
+        Coordenadas de la pupila.
+    Z_diff : np.ndarray
+        Valores de amplitud del error residual (Z_exp - Z_fit).
+    title : str
+        Titulo del grafico.
+    cmap : str
+        Mapa de colores para la superficie.
+    z_scale : float
+        Multiplicador manual del eje vertical Z.
+    wireframe : bool
+        Si es True, renderiza como malla de alambre en lugar de superficie solida.
+    show_grid : bool
+        Si es True, muestra la cuadricula de los ejes 3D.
+    n_grid : int
+        Resolucion de la grilla de interpolacion (n_grid x n_grid puntos).
+    sigma : float
+        Factor de suavizado gaussiano espacial (0.0 = desactivado).
+    show_contours : bool
+        Si es True, proyecta curvas de nivel sobre el piso del eje Z.
+    n_contour_levels : int
+        Numero de curvas de nivel a proyectar (rango sugerido: 5-30).
+    """
+    fig = Figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    Z_scaled = Z_diff * z_scale
+    Xi, Yi, Zi = _interpolar_a_grilla(X_c, Y_c, Z_scaled, n_grid, sigma)
+
+    # Renderizar superficie continua o malla de alambre segun el modo elegido.
     import warnings
     with np.errstate(all='ignore'), warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -364,11 +386,104 @@ def mapa_fase_3d(X_c, Y_c, Z_diff, title='Error Residual 3D', cmap='viridis', z_
 
     fig.colorbar(surf, shrink=0.5, aspect=10, pad=0.1, label='Magnitud Z')
 
+    # Proyectar curvas de nivel sobre el piso del eje Z cuando el usuario las solicita.
+    if show_contours:
+        try:
+            z_offset = float(np.nanmin(Zi)) - 0.05 * (float(np.nanmax(Zi)) - float(np.nanmin(Zi)))
+            with np.errstate(all='ignore'), warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                ax.contour(
+                    Xi, Yi, Zi,
+                    levels=n_contour_levels,
+                    zdir='z',
+                    offset=z_offset,
+                    cmap='gray',
+                    alpha=0.6,
+                )
+        except Exception:
+            pass
+
     ax.set_title(title)
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Amplitud Z')
     ax.grid(show_grid)
+
+    try:
+        fig.tight_layout()
+    except Exception:
+        pass
+    return fig
+
+
+def mapa_fase_2d(
+    X_c: np.ndarray,
+    Y_c: np.ndarray,
+    Z_diff: np.ndarray,
+    title: str = 'Error Residual 2D',
+    cmap: str = 'viridis',
+    n_grid: int = 80,
+    sigma: float = 0.0,
+    show_contours: bool = False,
+    n_contour_levels: int = 10,
+) -> Figure:
+    """
+    Genera la representacion bidimensional (mapa de calor) del error residual sobre la pupila circular,
+    con curvas de nivel superpuestas opcionales.
+
+    Parametros
+    ----------
+    X_c, Y_c : np.ndarray
+        Coordenadas de la pupila.
+    Z_diff : np.ndarray
+        Valores de amplitud del error residual (Z_exp - Z_fit).
+    title : str
+        Titulo del grafico.
+    cmap : str
+        Mapa de colores para el mapa de calor.
+    n_grid : int
+        Resolucion de la grilla de interpolacion.
+    sigma : float
+        Factor de suavizado gaussiano (0.0 = desactivado).
+    show_contours : bool
+        Si es True, superpone curvas de nivel sobre el mapa de calor.
+    n_contour_levels : int
+        Numero de curvas de nivel a dibujar.
+    """
+    fig = Figure()
+    ax = fig.add_subplot(111)
+
+    Xi, Yi, Zi = _interpolar_a_grilla(X_c, Y_c, Z_diff, n_grid, sigma)
+
+    # Renderizar como imagen 2D (mapa de calor) con la pupila circular enmascarada.
+    im = ax.imshow(
+        Zi,
+        cmap=cmap,
+        extent=[-1, 1, -1, 1],
+        origin='lower',
+    )
+    fig.colorbar(im, ax=ax, shrink=0.85, label='Amplitud Z')
+
+    # Superponer curvas de nivel sobre el mapa de calor cuando el usuario las solicita.
+    if show_contours:
+        try:
+            import warnings
+            with np.errstate(all='ignore'), warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                color_contorno = 'white' if cmap in ('viridis', 'inferno', 'plasma', 'magma') else 'black'
+                ax.contour(
+                    Xi, Yi, Zi,
+                    levels=n_contour_levels,
+                    colors=color_contorno,
+                    alpha=0.65,
+                    linewidths=0.9,
+                )
+        except Exception:
+            pass
+
+    ax.set_title(title, fontsize=11, fontweight='bold')
+    ax.set_xlabel('X (pupila normalizada)')
+    ax.set_ylabel('Y (pupila normalizada)')
 
     try:
         fig.tight_layout()
@@ -476,15 +591,35 @@ def graficar_fase_continua_y_puntos(fase_continua: np.ndarray, X_pts: np.ndarray
     return fig
 
 
-def graficar_interferograma_sintetico(A_coefs: np.ndarray, is_dark: bool = False, N: int = 256, franjas_carrier: int = 12) -> Figure:
+def graficar_interferograma_sintetico(
+    A_coefs: np.ndarray,
+    is_dark: bool = False,
+    N: int = 256,
+    franjas_carrier: int = 12,
+    indices_activos: list = None,
+) -> Figure:
     """
-    Sintetiza y grafica la imagen 2D del interferograma a partir de los coeficientes A de Zernike.
-    Usa Figure() directamente para evitar la creacion de ventanas nativas en ejecutables Windows.
+    Sintetiza y grafica la imagen 2D del interferograma a partir de los coeficientes Zernike,
+    con soporte para visualizar unicamente las contribuciones seleccionadas por el usuario.
+
+    Parametros
+    ----------
+    A_coefs : np.ndarray
+        Vector completo de coeficientes Zernike ajustados.
+    is_dark : bool
+        Si es True, aplica el tema oscuro Nord al fondo del grafico.
+    N : int
+        Resolucion de la grilla sintetica (N x N pixeles).
+    franjas_carrier : int
+        Frecuencia portadora espacial en la direccion X.
+    indices_activos : list[int] | None
+        Indices base-1 (ISO 10110-5) de los terminos que contribuyen al frente de onda.
+        Si es None, se incluyen todos los terminos.
     """
     from lib.interferometria import sintetizar_interferograma_desde_zernike
 
     interferograma, X_grid, Y_grid, W_fit_2d = sintetizar_interferograma_desde_zernike(
-        A_coefs=A_coefs, N=N, franjas_carrier=franjas_carrier
+        A_coefs=A_coefs, N=N, franjas_carrier=franjas_carrier, indices_activos=indices_activos
     )
 
     bg_color = '#1e1e2e' if is_dark else '#ffffff'
@@ -500,7 +635,13 @@ def graficar_interferograma_sintetico(A_coefs: np.ndarray, is_dark: bool = False
         label.set_color(text_color)
     cbar.set_label('Intensidad Norm. I(x,y)', color=text_color)
 
-    ax.set_title("Interferograma Sintetico Reconstruido (Zernike)", color=text_color, fontsize=11, fontweight='bold')
+    # Construir el titulo reflejando si la vista es completa o parcial.
+    if indices_activos is not None and len(indices_activos) < len(A_coefs):
+        terminos_str = ", ".join(f"Z{i}" for i in sorted(indices_activos))
+        titulo_ax = f"Interferograma Sintetico: {terminos_str}"
+    else:
+        titulo_ax = "Interferograma Sintetico Reconstruido (Zernike)"
+    ax.set_title(titulo_ax, color=text_color, fontsize=11, fontweight='bold')
     ax.set_xlabel("X (pupila normalizada)", color=text_color)
     ax.set_ylabel("Y (pupila normalizada)", color=text_color)
     ax.tick_params(colors=text_color)

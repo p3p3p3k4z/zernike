@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QTextBrowser, QPushButton, QMessageBox
 from PySide6.QtCore import Qt
 
-from gui.error_residual_dialog import ErrorResidual3DDialog, mostrar_ventana_3d_error_residual
+from gui.error_residual_dialog import ErrorResidual3DDialog, mostrar_ventana_3d_error_residual, mostrar_ventana_2d_error_residual
 from gui.styles import obtener_paleta_tema
 
 URL_PORTAFOLIO_DESARROLLADOR = "https://marioramirez-dev.vercel.app/"

@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QTabWidget, QFileDialog,
-    QMessageBox, QStatusBar, QSplitter, QProgressBar, QLabel, QToolBar
+    QMessageBox, QStatusBar, QSplitter, QProgressBar, QLabel, QToolBar,
+    QGroupBox, QCheckBox, QPushButton
 )
 
 from PySide6.QtCore import Qt
@@ -22,7 +23,7 @@ from PySide6.QtGui import QKeySequence, QAction, QIcon
 
 from gui.canvas import MplCanvasWidget
 from gui.styles import obtener_estilo_tema
-from gui.dialogs import mostrar_manual_usuario, mostrar_acerca_de, mostrar_ventana_3d_error_residual
+from gui.dialogs import mostrar_manual_usuario, mostrar_acerca_de, mostrar_ventana_3d_error_residual, mostrar_ventana_2d_error_residual
 from gui.zernike_viewer_dialog import ZernikeViewer3DDialog
 from gui.engine_comparison_dialog import EngineComparisonDialog
 from gui.interferogram_dialog import InterferogramProcessorDialog
@@ -40,7 +41,7 @@ from lib.matriz import (
 )
 from lib.io import exportar_resultados_csv, exportar_zemax, exportar_codev, cargar_datos_csv
 from lib.visualizacion import (
-    mapa_fase_3d, graficar_flujo_zernike, graficar_pupila,
+    mapa_fase_3d, mapa_fase_2d, graficar_flujo_zernike, graficar_pupila,
     graficar_distribucion_ccd, graficar_interferograma_sintetico
 )
 
@@ -242,6 +243,9 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.control_bar_3d.cambio_modo_render.connect(lambda mode: self._redibujar_3d_main())
         self.control_bar_3d.cambio_grid.connect(lambda grid: self._redibujar_3d_main())
         self.control_bar_3d.cambio_suavizado.connect(lambda n, s: self._redibujar_3d_main())
+        # Conectar nuevas senales: toggle 2D/3D y curvas de nivel activan redibujo completo.
+        self.control_bar_3d.cambio_modo_vista.connect(lambda _modo: self._redibujar_3d_main())
+        self.control_bar_3d.cambio_contornos.connect(lambda _a, _n: self._redibujar_3d_main())
         layout_3d.addWidget(self.control_bar_3d)
 
         self.canvas_3d = MplCanvasWidget(self)
@@ -249,9 +253,50 @@ class ZernikeZemaxMainWindow(QMainWindow):
 
         self.tabs.addTab(container_3d, "Error Residual 3D")
 
-        # Tab 4: Interferograma sintetico
+        # Tab 4: Interferograma sintetico con selector de contribuciones Zernike
+        container_sintetico = QWidget()
+        layout_sintetico = QVBoxLayout(container_sintetico)
+        layout_sintetico.setContentsMargins(8, 8, 8, 4)
+        layout_sintetico.setSpacing(6)
+
+        grupo_selector = QGroupBox("Seleccion de Contribuciones Zernike")
+        layout_selector = QVBoxLayout(grupo_selector)
+        layout_selector.setContentsMargins(8, 4, 8, 4)
+        layout_selector.setSpacing(4)
+
+        # Barra de acciones rapidas: Seleccionar Todos / Limpiar Seleccion
+        barra_acciones = QHBoxLayout()
+        btn_sel_todos = QPushButton("Seleccionar Todos")
+        btn_sel_todos.setObjectName("btn_preset")
+        btn_sel_todos.clicked.connect(self._seleccionar_todos_zernike)
+        btn_limpiar = QPushButton("Limpiar Seleccion")
+        btn_limpiar.setObjectName("btn_preset")
+        btn_limpiar.clicked.connect(self._limpiar_seleccion_zernike)
+        barra_acciones.addWidget(btn_sel_todos)
+        barra_acciones.addWidget(btn_limpiar)
+        barra_acciones.addStretch()
+        layout_selector.addLayout(barra_acciones)
+
+        # Cuadricula 3 x 7 de checkboxes (Z1 a Z21), todos activos por defecto.
+        grid_checks = QHBoxLayout()
+        self._chk_zernike = []
+        COLS = 7
+        columnas = [QVBoxLayout() for _ in range(COLS)]
+        for idx in range(1, 22):
+            chk = QCheckBox(f"Z{idx}")
+            chk.setChecked(True)
+            chk.stateChanged.connect(self._actualizar_grafica_sintetico)
+            self._chk_zernike.append(chk)
+            columnas[(idx - 1) % COLS].addWidget(chk)
+        for col_layout in columnas:
+            grid_checks.addLayout(col_layout)
+        layout_selector.addLayout(grid_checks)
+        layout_sintetico.addWidget(grupo_selector)
+
         self.canvas_sintetico = MplCanvasWidget(self)
-        self.tabs.addTab(self.canvas_sintetico, "Interferograma Sintético")
+        layout_sintetico.addWidget(self.canvas_sintetico, stretch=1)
+
+        self.tabs.addTab(container_sintetico, "Interferograma Sintetico")
 
         self.tabs.currentChanged.connect(self._al_cambiar_pestana_principal)
 
@@ -407,7 +452,7 @@ class ZernikeZemaxMainWindow(QMainWindow):
 
 
     def _actualizar_grafica_3d(self, X, Y, W_exp, W_fit, cmap_override=None):
-        """Renderiza el mapa tridimensional del error residual respetando la orientacion y parametros manuales de control."""
+        """Renderiza el error residual en modo 3D o 2D segun el toggle activo, con curvas de nivel opcionales."""
         Z_diff = W_exp - W_fit
         cmap_name = cmap_override if cmap_override is not None else self.control_bar_3d.combo_cmap.currentText()
 
@@ -418,7 +463,11 @@ class ZernikeZemaxMainWindow(QMainWindow):
         show_grid = self.control_bar_3d.chk_grid.isChecked()
         n_grid = self.control_bar_3d.spin_n_grid.value()
         sigma = self.control_bar_3d.spin_sigma.value()
+        modo_3d = not self.control_bar_3d.btn_modo_vista.isChecked()
+        show_contours = self.control_bar_3d.chk_contornos.isChecked()
+        n_contour_levels = self.control_bar_3d.spin_n_contornos.value()
 
+        # Preservar orientacion de camara desde el eje activo antes de redibujar.
         try:
             if hasattr(self, 'canvas_3d') and hasattr(self.canvas_3d, 'figure') and self.canvas_3d.figure is not None:
                 if len(self.canvas_3d.figure.axes) > 0:
@@ -435,19 +484,33 @@ class ZernikeZemaxMainWindow(QMainWindow):
         except Exception:
             pass
 
-        fig = mapa_fase_3d(
-            X, Y, Z_diff,
-            title='Error Residual 3D (Z_exp - Z_fit)',
-            cmap=cmap_name,
-            z_scale=z_scale,
-            wireframe=wireframe,
-            show_grid=show_grid,
-            n_grid=n_grid,
-            sigma=sigma
-        )
-
-        if hasattr(fig, 'axes') and len(fig.axes) > 0 and hasattr(fig.axes[0], 'view_init'):
-            fig.axes[0].view_init(elev=elev, azim=azim)
+        if modo_3d:
+            # Despachar al renderizador tridimensional con curvas de nivel proyectadas en el piso.
+            fig = mapa_fase_3d(
+                X, Y, Z_diff,
+                title='Error Residual 3D (Z_exp - Z_fit)',
+                cmap=cmap_name,
+                z_scale=z_scale,
+                wireframe=wireframe,
+                show_grid=show_grid,
+                n_grid=n_grid,
+                sigma=sigma,
+                show_contours=show_contours,
+                n_contour_levels=n_contour_levels,
+            )
+            if hasattr(fig, 'axes') and len(fig.axes) > 0 and hasattr(fig.axes[0], 'view_init'):
+                fig.axes[0].view_init(elev=elev, azim=azim)
+        else:
+            # Despachar al renderizador bidimensional con curvas de nivel superpuestas opcionales.
+            fig = mapa_fase_2d(
+                X, Y, Z_diff,
+                title='Error Residual 2D (Z_exp - Z_fit)',
+                cmap=cmap_name,
+                n_grid=n_grid,
+                sigma=sigma,
+                show_contours=show_contours,
+                n_contour_levels=n_contour_levels,
+            )
 
         self.canvas_3d.set_figure(fig)
 
@@ -499,17 +562,44 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.lanzar_animacion_flujo_zernike()
 
     def _actualizar_grafica_sintetico(self):
-        """Renderiza el mapa 2D del interferograma sintetico en la Pestana 4."""
+        """Renderiza el interferograma sintetico usando solo los terminos Zernike seleccionados en los checkboxes."""
         if self.ultimo_resultado is None or not hasattr(self, 'canvas_sintetico'):
             return
 
+        # Recopilar los indices (base-1) de los checkboxes activos; None implica todos.
+        if hasattr(self, '_chk_zernike') and self._chk_zernike:
+            indices_activos = [
+                idx + 1
+                for idx, chk in enumerate(self._chk_zernike)
+                if chk.isChecked()
+            ] or None  # Lista vacia equivale a ninguna contribucion -> None para pasar solo carrier
+        else:
+            indices_activos = None
+
         fig = graficar_interferograma_sintetico(
             A_coefs=self.ultimo_resultado.A,
-            is_dark=False,  # Siempre claro segun requerimiento
+            is_dark=False,
             N=256,
-            franjas_carrier=12
+            franjas_carrier=12,
+            indices_activos=indices_activos,
         )
         self.canvas_sintetico.set_figure(fig)
+
+    def _seleccionar_todos_zernike(self):
+        """Activa los 21 checkboxes y actualiza el interferograma sintetico en un solo redibujo."""
+        for chk in self._chk_zernike:
+            chk.blockSignals(True)
+            chk.setChecked(True)
+            chk.blockSignals(False)
+        self._actualizar_grafica_sintetico()
+
+    def _limpiar_seleccion_zernike(self):
+        """Desactiva los 21 checkboxes y actualiza el interferograma sintetico en un solo redibujo."""
+        for chk in self._chk_zernike:
+            chk.blockSignals(True)
+            chk.setChecked(False)
+            chk.blockSignals(False)
+        self._actualizar_grafica_sintetico()
 
     def _mostrar_interferograma_sintetico(self):
         """Muestra el interferograma sintetico en una ventana flotante independiente."""
@@ -687,6 +777,24 @@ class ZernikeZemaxMainWindow(QMainWindow):
         W_fit = self.ultimo_resultado.W_fit
         self._dialog_3d = mostrar_ventana_3d_error_residual(X_in, Y_in, W_in, W_fit, parent=self)
         self.status_bar.showMessage("Gráfico 3D de Error Residual con panel de controles desplegado en ventana flotante.")
+
+    def _mostrar_grafica_2d_flotante(self):
+        """Abre la grafica bidimensional del error residual en un cuadro flotante modular con controles."""
+        if self.ultimo_resultado is None or self.ultimas_coordenadas is None:
+            QMessageBox.information(
+                self,
+                "Sin Ajuste Calculado",
+                "Primero debes hacer clic en 'EJECUTAR AJUSTE DE ZERNIKE' para calcular el error residual."
+            )
+            return
+
+        if hasattr(self, '_dialog_2d') and self._dialog_2d is not None and self._dialog_2d.isVisible():
+            self._dialog_2d.close()
+
+        X_in, Y_in, W_in = self.ultimas_coordenadas
+        W_fit = self.ultimo_resultado.W_fit
+        self._dialog_2d = mostrar_ventana_2d_error_residual(X_in, Y_in, W_in, W_fit, parent=self)
+        self.status_bar.showMessage("Gráfico 2D de Error Residual con panel de controles desplegado en ventana flotante.")
 
     def _mostrar_vista_modo_zemax(self):
         """Abre la ventana interactiva flotante identica a Zemax OpticStudio con Quick Fit y matriz de coeficientes."""

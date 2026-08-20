@@ -142,6 +142,29 @@ def test_error_residual_3d_dialog(qapp):
     dialog.close()
 
 
+def test_error_residual_2d_dialog(qapp):
+    """
+    Verifica que la ventana flotante modular 2D del Error Residual se instancie directamente en modo 2D.
+    """
+    import numpy as np
+    from gui.dialogs import mostrar_ventana_2d_error_residual
+
+    x = np.linspace(-1, 1, 5)
+    y = np.linspace(-1, 1, 5)
+    xx, yy = np.meshgrid(x, y)
+    X = xx.ravel()
+    Y = yy.ravel()
+    W_exp = X**2 + Y**2
+    W_fit = X**2 + Y**2 * 0.9
+
+    dialog = mostrar_ventana_2d_error_residual(X, Y, W_exp, W_fit)
+    assert dialog is not None
+    assert dialog.control_bar is not None
+    assert dialog.control_bar.btn_modo_vista.isChecked() is True
+    dialog.close()
+
+
+
 def test_preset_manager_persistence(qapp, tmp_path):
     """
     Verifica la persistencia JSON, el almacenamiento del historial y los presets personalizados.
