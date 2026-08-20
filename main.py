@@ -415,14 +415,15 @@ if __name__ == "__main__":
 
     elif FLUJO == "CIRCULO":
         print("\n" + "="*60)
-        print("  Generando datos en el Circulo Unitario Completo")
+        print("  Generando datos en el Circulo Unitario Completo (Superficie Z Aleatoria)")
         print("="*60)
-        N = 50
-        X_c, Y_c, Z_c = generar_datos_circulo(N, semilla=42)
+        N = 100
+        X_c, Y_c, Z_c = generar_datos_circulo(N, semilla=None, superficie_aleatoria=True)
         Z_c_n = normalizar_vector(Z_c)
         imprimir_matriz_n_puntos(X_c, Y_c, Z_c_n, "MATRIZ: CIRCULO UNITARIO")
         resultados, X, Y, W_n = seccion_zernike(X_c, Y_c, Z_c_n, "Circulo Unitario")
         seccion_animacion(resultados, X, Y, W_n)
+
 
     elif FLUJO == "CCD":
         resultado_ccd = seccion_ccd()

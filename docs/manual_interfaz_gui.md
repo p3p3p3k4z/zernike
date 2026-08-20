@@ -34,9 +34,13 @@ La barra de menú superior organiza las operaciones del sistema en cinco categor
 * **Comparar Motor Python (NumPy) vs. Fortran Nativo...**: Ejecuta una prueba cruzada simultánea en ambos motores y despliega una tabla comparativa de precisión y tiempos.
 
 ### 2.3. Menú Ver
-* **Cambiar Tema (Oscuro / Claro)**: Alterna dinámicamente la paleta de colores de la interfaz (estilo Nord Dark o estilo Zemax Light) e iguala los fondos de todas las gráficas de Matplotlib.
-* **Ver Mapa de Error Residual 3D**: Abre el diálogo flotante no modal del mapa de error residual para análisis independiente.
-* **Ver Interferograma Sintético (Ctrl+I)**: Enfoca directamente la Pestaña 4 del área central.
+* **Alternar Tema Claro / Oscuro (Ctrl+T)**: Alterna dinámicamente la paleta de colores de la interfaz (estilo Nord Dark o estilo Zemax Light) e iguala los fondos de todas las gráficas de Matplotlib.
+* **Mapa de Error Residual 3D**: Abre el diálogo flotante no modal del mapa de error residual en superficie 3D.
+* **Mapa de Error Residual 2D**: Abre el diálogo flotante no modal del mapa de error residual en mapa de calor 2D con isolíneas.
+* **Sintetizar Interferograma Óptico desde Zernike**: Genera la reconstrucción óptica 2D del patrón de interferencia en ventana flotante.
+* **Distribución CCD en 4 Cuadrantes**: Abre la gráfica de puntos distribuidos en 4 cuadrantes.
+* **Filtrado por Pupila Óptica**: Abre la gráfica del recorte circular por pupila óptica.
+
 
 ### 2.4. Menú Motor Numérico
 Permite conmutar el motor computacional activo para la ejecución:
@@ -66,7 +70,8 @@ El menú desplegable `combo_modo` permite conmutar entre cuatro modos de operaci
 2. **Modo 1: 2. Archivo de Entrada CSV**:
    - Muestra el campo de texto y el botón "Examinar..." para seleccionar archivos `.csv` externos.
 3. **Modo 2: 2. Círculo Unitario Sintético**:
-   - Muestra la entrada para especificar la cantidad exacta de puntos aleatorios $N$ a distribuir dentro de la pupila circular unitaria $\rho \le 1.0$.
+   - Permite especificar el número de puntos $N$ (ej. 500, 2000, 5000), activar la opción **"Superficie Z Aleatoria"** (que sintetiza superficies ópticas realistas variando coeficientes Zernike + ruido) y activar **"Semilla Aleatoria"** para generar muestras espaciales $(X,Y)$ distintas en cada ejecución. También admite evaluar ecuaciones personalizadas $Z(x,y)$ sobre la pupila.
+
 4. **Modo 3: 2. Imagen de Interferograma**:
    - Muestra el selector de imágenes (`*.png`, `*.jpg`, `*.bmp`) y el botón para abrir el Procesador Takeda FFT.
 
@@ -118,23 +123,30 @@ Muestra la superficie tridimensional interactiva correspondiente al mapa de dife
 
 $$\text{Error Residual}(x,y) = Z_{\text{exp}}(x,y) - Z_{\text{fit}}(x,y)$$
 
-La pestaña incluye la barra de controles dinámicos `ControlBar3D`:
-* **Paleta de Colores (Colormap)**: Selección de escalas cromáticas (viridis, plasma, inferno, coolwarm, magma, cividis).
-* **Ángulos de Vista**: Controles numéricos para la elevación (-90° a +90°) y azimut (0° a 360°) de la cámara 3D.
-* **Escala Z**: Factor de amplificación vertical de la deformación (0.1x a 10x).
-* **Grilla (Resolución)**: Control numérico para ajustar la densidad de la matriz regular de interpolación cúbica (30 a 200 puntos por lado).
-* **Suavizado (sigma)**: Control numérico para aplicar un filtro gaussiano espacial ($0.0 \le \sigma \le 5.0$) que atenúa el ruido numérico de alta frecuencia y suaviza picos desproporcionados en el residuo.
-* **Modo Malla de Alambre (Wireframe)**: Conmutador entre superficie sólida renderizada y estructura de alambre.
-* **Cuadrícula**: Conmutador para mostrar u ocultar la grilla de los ejes 3D.
+La pestaña incluye la barra de controles dinámicos `ControlBar3D` en 2 filas:
+* **Fila 1 (Perspectiva & Cámara)**:
+  * **Botón Vista 3D / Vista 2D**: Conmutador para alternar entre representación topográfica 3D y mapa de calor 2D.
+  * **Paleta de Colores (Colormap)**: Selección de escalas cromáticas (viridis, plasma, inferno, coolwarm, magma, cividis, etc.).
+  * **Ángulos de Vista**: Controles numéricos para la elevación (-90° a +90°) y azimut (0° a 360°) de la cámara 3D.
+  * **Escala Z**: Factor de amplificación vertical de la deformación (0.1x a 10x).
+* **Fila 2 (Malla, Filtros e Isolíneas)**:
+  * **Modo Malla de Alambre (Wireframe)**: Conmutador entre superficie sólida renderizada y estructura de alambre.
+  * **Cuadrícula**: Conmutador para mostrar u ocultar la grilla de los ejes.
+  * **Grilla (Resolución)**: Control numérico para ajustar la densidad de la matriz regular de interpolación cúbica (30 a 200 puntos por lado).
+  * **Suavizado (sigma)**: Control numérico para aplicar un filtro gaussiano espacial ($0.0 \le \sigma \le 5.0$) que atenúa el ruido numérico de alta frecuencia.
+  * **Curvas de Nivel & Niveles**: Casilla de verificación para superponer isolíneas de fase con densidad configurable (3 a 50 niveles).
+  * **Restablecer Vista**: Botón para restaurar la orientación inicial y filtros por defecto.
 
 ---
 
 ### 4.4. Pestaña 4: Interferograma Sintético
-Genera la reconstrucción bidimensional del patrón óptico de franjas de interferencia que corresponde al frente de onda ajustado, basándose en la ecuación de simulación directa:
+Genera la reconstrucción bidimensional del patrón óptico de franjas de interferencia que corresponde al frente de onda ajustado, simulando un interferómetro de laboratorio (Forward Optical Model):
 
-$$I(x,y) = a(x,y) + b(x,y) \cos\left(2\pi \cdot \text{escala\_opd} \cdot W_{\text{fit}}(x,y) + 2\pi(f_x X + f_y Y)\right)$$
+$$I(x,y) = a(x,y) + b(x,y) \cos\left(2\pi \cdot \text{escala\_opd} \cdot W_{\text{seleccionado}}(x,y) + 2\pi(f_x X + f_y Y)\right)$$
 
-Incorpora iluminación gaussiana de fondo $a(x,y)$, visibilidad de franja $b(x,y) = 0.42$ e inclinación de la portadora espacial ($f_x = 12, f_y = 3$).
+- **Origen de las Franjas Portadoras**: La presencia constante de franjas paralelas rectas en el interferograma se debe a la **frecuencia portadora espacial** ($f_x = 12, f_y = 3$). Esta inclinación simula el espejo de referencia del interferómetro para evitar ambigüedades de signo.
+- **Selector de Contribuciones Zernike ($Z_1$ a $Z_{21}$)**: Permite marcar o desmarcar individualmente cualquiera de las 21 casillas de verificación. Al desmarcar términos, sus coeficientes se anulan en $W_{\text{seleccionado}}$, permitiendo observar cómo una aberración específica (como desenfoque $Z_4$ o coma $Z_7, Z_8$) deforma o curva las franjas portadoras de referencia. Si se desmarcan todas las casillas, se aísla únicamente el patrón de franjas rectas de la portadora ($W = 0$).
+
 
 ---
 

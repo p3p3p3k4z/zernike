@@ -77,10 +77,10 @@ def normalizar_por_radio(X, Y):
     return X / R_max, Y / R_max
 
 
-def generar_datos_circulo(N=50, semilla=42, func_z=None):
+def generar_datos_circulo(N=50, semilla=42, func_z=None, superficie_aleatoria=False):
     """
     Genera N puntos aleatorios dentro del circulo unitario con
-    densidad uniforme en area, y calcula Z.
+    densidad uniforme en area, y calcula la superficie Z.
 
     Por que sqrt(random)?
     La distribucion radial uniforme en area requiere rho ~ sqrt(U)
@@ -89,24 +89,51 @@ def generar_datos_circulo(N=50, semilla=42, func_z=None):
 
     Parametros
     ----------
-    N      : int  -- numero de puntos (defecto 50)
-    semilla: int  -- semilla para reproducibilidad
-    func_z : callable, opt -- funcion personalizada para calcular Z(X, Y)
+    N : int
+        Numero de puntos (defecto 50).
+    semilla : int | None
+        Semilla para reproducibilidad. Si es None, genera posiciones dinámicas aleatorias.
+    func_z : callable | None
+        Funcion personalizada para calcular Z(X, Y).
+    superficie_aleatoria : bool
+        Si es True y func_z es None, genera una superficie optica realista sintetizada
+        mediante coeficientes Zernike aleatorios y ruido gaussiano.
 
     Retorna
     -------
-    X, Y, Z : ndarray (N,) -- coordenadas y valores de superficie
+    X, Y, Z : ndarray (N,)
+        Coordenadas y valores de la superficie sobre el disco unitario.
     """
-    np.random.seed(semilla)
-    rho   = np.sqrt(np.random.rand(N))
-    theta = 2 * np.pi * np.random.rand(N)
+    if semilla is not None:
+        np.random.seed(semilla)
+    else:
+        np.random.seed()
+
+    rho = np.sqrt(np.random.rand(N))
+    theta = 2.0 * np.pi * np.random.rand(N)
     X = rho * np.cos(theta)
     Y = rho * np.sin(theta)
-    if func_z is None:
-        Z = 3 * X * Y + 2 * X
-    else:
+
+    if func_z is not None:
         Z = func_z(X, Y)
+    elif superficie_aleatoria:
+        # Generar superficie optica realista mediante coeficientes Zernike aleatorios
+        from lib.zernike import polinomios_zernike, evaluar_polinomios
+        polinomios = polinomios_zernike()
+        U = evaluar_polinomios(X, Y, polinomios)
+        L = U.shape[0]
+        # Coeficientes aleatorios atenuados segun el orden radial
+        pesos_atenuacion = 1.0 / (np.arange(1, L + 1) ** 0.8)
+        coefs_rand = (np.random.randn(L) * 1.5) * pesos_atenuacion
+        Z = np.dot(coefs_rand, U)
+        # Añadir ruido aleatorio ligero
+        ruido = np.random.randn(N) * 0.05
+        Z = Z + ruido
+    else:
+        Z = 3.0 * X * Y + 2.0 * X
+
     return X, Y, Z
+
 
 
 def matriz3d_cuadrante(x_start, x_end, y_start, y_end, n_x=5, n_y=10, func_z=None):

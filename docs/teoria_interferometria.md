@@ -204,9 +204,9 @@ $$A = (Z^T Z)^{-1} Z^T W$$
 
 ## 5. Síntesis del Interferograma Óptico Sintético desde Zernike
 
-Para simular la captura de laboratorio de una superficie evaluada y verificar visualmente la reconstrucción del frente de onda, el sistema implementa la simulación directa (*Forward Optical Modeling*)
+Para simular la captura de laboratorio de una superficie evaluada y verificar visualmente la reconstrucción del frente de onda, el sistema implementa la simulación directa (*Forward Optical Modeling*).
 
-### Ecuación Directa de Intensidad
+### 5.1. Ecuación Directa de Intensidad
 A partir del mapa de frente de onda reconstruido $W_{\text{fit}}(x,y) = \sum A_j Z_j(x,y)$, la intensidad luminosa bidimensional $I(x,y)$ se modela como:
 
 $$I(x,y) = \text{clip}\Big( a(x,y) + b(x,y) \cos\big( \phi_{\text{óptica}}(x,y) + \phi_{\text{portadora}}(x,y) \big), \, 0.0, \, 1.0 \Big)$$
@@ -217,6 +217,35 @@ Donde:
 * **Iluminación Gaussiana de Fondo**: $a(x,y) = 0.48 + 0.07 \cdot \exp(-1.5 (X^2 + Y^2))$, imita el perfil de haz de láser He-Ne de laboratorio.
 * **Modulación de Contraste**: $b(x,y) = 0.42$, fija la visibilidad de las franjas dentro del rango dinámico $[0, 1]$.
 * **Enmascaramiento Pupilar**: Supresión limpia del fondo fuera del disco circular $\rho = \sqrt{x^2+y^2} \le 0.96$.
+
+---
+
+### 5.2. ¿Por qué Aparecen Múltiples Franjas en la Sintetización?
+
+La aparición de una cantidad considerable de franjas de interferencia en la imagen sintética responde a dos causas físicas y metrológicas fundamentales:
+
+1. **Efecto de la Frecuencia Portadora Espacial ($f_x, f_y$)**:
+   Incluso cuando **ningún término de Zernike está activo** (todos los coeficientes $A_j = 0$), el interferograma sintético **no es una imagen blanca o uniforme**. En su lugar, muestra un patrón de **12 franjas paralelas de inclinación** (*carrier tilt fringes*). Esto recrea el comportamiento de un interferómetro real (Fizeau o Twyman-Green), donde el espejo de referencia se inclina intencionadamente para separar el espectro de fase en el dominio de Fourier (método de Takeda) sin ambigüedad de signo.
+
+2. **Densidad de Fase por Amplitud de Aberración ($\text{escala\_opd}$)**:
+   Cada incremento de $1.0\lambda$ en la diferencia de camino óptico añade $2\pi$ radianes a la fase $\phi_{\text{óptica}}$, lo que equivale a la formación de una **nueva franja oscura y clara**. Dado que la deformación reconstruida $W_{\text{fit}}$ puede alcanzar valores de varios micrómetros o maderas de longitud de onda (por ejemplo $2.5\lambda$), al multiplicar por el factor $\text{escala\_opd} = 2.0$, la fase angular abarca decenas de ciclos completos ($10\pi$). Esto se traduce en un patrón con una densidad elevada de franjas curvas.
+
+---
+
+### 5.3. Funcionamiento de la Selección de Coeficientes ($Z_1$ a $Z_{21}$)
+
+En la Pestaña 4 de la interfaz gráfica, el usuario dispone de una cuadrícula de **21 casillas de verificación** ($Z_1$ a $Z_{21}$). Al seleccionar o desmarcar coeficientes específicos, el sistema evalúa únicamente la contribución óptica de los términos activos:
+
+$$W_{\text{seleccionado}}(x,y) = \sum_{k \in \text{activos}} A_k Z_k(x,y)$$
+
+Los coeficientes desmarcados se establecen temporalmente en $0$. Esto permite aislar y estudiar el impacto individual o combinado de aberraciones específicas sobre la morfología de las franjas:
+
+* **Inclinación pura (Pistón y Tilt, $Z_1, Z_2, Z_3$)**: Modifica la orientación o el espaciado de las franjas rectas portadoras.
+* **Desenfoque ($Z_4$)**: Curva las franjas rectas de la portadora convirtiéndolas en arcos parabólicos o concéntricos.
+* **Astigmatismo ($Z_5, Z_6$)**: Deforma las franjas en patrones hiperbólicos en forma de "silla de montar".
+* **Coma ($Z_7, Z_8$)**: Introduce asimetría lateral transversal en las franjas (forma de cometa).
+* **Aberración Esférica ($Z_{13}$)**: Produce curvatura simétrica radial de alto orden hacia el borde de la pupila.
+* **Ningún término seleccionado (Limpiar selección)**: Cancela la fase óptica ($W = 0$) y muestra únicamente las 12 franjas rectas de la portadora de referencia.
 
 ---
 

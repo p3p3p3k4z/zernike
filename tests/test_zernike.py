@@ -78,3 +78,21 @@ def test_ajuste_completo_polinomio_complejo():
     assert error_rms < 1e-5
     assert verificar_ortogonalidad(res.V) is True
     assert verificar_formulas(res) is True
+
+
+def test_generar_datos_circulo_superficie_aleatoria():
+    """Prueba la generación de superficies aleatorias de Zernike en el disco unitario."""
+    X1, Y1, Z1 = generar_datos_circulo(N=100, semilla=None, superficie_aleatoria=True)
+    X2, Y2, Z2 = generar_datos_circulo(N=100, semilla=None, superficie_aleatoria=True)
+
+    assert len(X1) == 100
+    assert len(Y1) == 100
+    assert len(Z1) == 100
+
+    # Puntos deben estar estrictamente contenidos en la pupila unitaria rho <= 1
+    assert np.all(X1**2 + Y1**2 <= 1.0)
+    assert np.all(X2**2 + Y2**2 <= 1.0)
+
+    # Con semilla=None, dos llamadas consecutivas producen superficies y arreglos distintos
+    assert not np.array_equal(Z1, Z2)
+

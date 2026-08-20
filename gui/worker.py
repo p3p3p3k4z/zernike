@@ -28,7 +28,8 @@ class ZernikeWorker(QThread):
 
     def __init__(self, modo: int, eq_str: str = "", N: int = 100, M: int = 100,
                  diametro: float = 100.0, filepath: str = "", motor: int = 0,
-                 datos_directos: tuple = None, parent=None):
+                 datos_directos: tuple = None, semilla: int = None,
+                 superficie_aleatoria: bool = True, parent=None):
         super().__init__(parent)
         self.modo = modo
         self.eq_str = eq_str
@@ -38,6 +39,8 @@ class ZernikeWorker(QThread):
         self.filepath = filepath
         self.motor = motor
         self.datos_directos = datos_directos
+        self.semilla = semilla
+        self.superficie_aleatoria = superficie_aleatoria
 
     def run(self):
         try:
@@ -86,9 +89,18 @@ class ZernikeWorker(QThread):
 
             else:  # Circulo Sintetico
                 n_puntos = self.N if self.N >= 5 else 500
-                X_in, Y_in, W_in = generar_datos_circulo(N=n_puntos, semilla=42)
+                # Si superficie_aleatoria es True, no evaluar la ecuacion fija por defecto del panel
+                func_z = parsear_ecuacion_z(self.eq_str) if (self.eq_str and not self.superficie_aleatoria) else None
+                X_in, Y_in, W_in = generar_datos_circulo(
+                    N=n_puntos,
+                    semilla=self.semilla,
+                    func_z=func_z,
+                    superficie_aleatoria=self.superficie_aleatoria if func_z is None else False
+                )
                 W_in = normalizar_vector(W_in)
                 X_raw_all, Y_raw_all, mask_all, R_pup = X_in, Y_in, np.ones(len(X_in), dtype=bool), 1.0
+
+
 
 
 

@@ -22,6 +22,8 @@ from PySide6.QtCore import Qt, Signal
 
 from lib.matriz import parsear_ecuacion_z
 
+from gui.components.equation_input_widget import EquationInputWidget
+
 _STYLE_ERROR = "border: 2px solid #EF4444; background-color: #FEF2F2; color: #991B1B;"
 _STYLE_OK = ""
 
@@ -41,6 +43,13 @@ class ParameterInputPanel(QWidget):
         self._conectar_validaciones()
         self._validar_inputs()
 
+    @property
+    def input_ecuacion(self):
+        return self.widget_eq_ccd.input_ecuacion
+
+    @property
+    def input_ecuacion_sintetico(self):
+        return self.widget_eq_sintetico.input_ecuacion
 
     def _construir_ui(self):
         layout = QVBoxLayout(self)
@@ -66,50 +75,11 @@ class ParameterInputPanel(QWidget):
         layout.addWidget(grupo_modo)
 
         # --- Grupo 2: Parametros del Sensor CCD ---
-
-
         self.grupo_ccd = QGroupBox("2. Configuración de Superficie & Sensor")
         layout_ccd = QVBoxLayout()
 
-        layout_ccd.addWidget(QLabel("Ecuación Z(x,y):"))
-        self.input_ecuacion = QLineEdit("3*x*y + 2*x")
-        self.input_ecuacion.setToolTip("Introduce una función cartesiana o trigonométrica (ej. sin(x) + cos(y)).")
-        layout_ccd.addWidget(self.input_ecuacion)
-
-        # Presets de Ecuaciones Rapidas
-        lbl_presets = QLabel("Ecuaciones de prueba rapidas:")
-        lbl_presets.setStyleSheet("font-size: 11px; color: #64748B;")
-        layout_ccd.addWidget(lbl_presets)
-
-        btn_gestor = QPushButton("Gestor de Presets e Historial...")
-        btn_gestor.setObjectName("btn_preset")
-        btn_gestor.setToolTip("Abre el administrador de presets opticos, historial reciente y ecuaciones guardadas.")
-        btn_gestor.clicked.connect(self._abrir_gestor_presets)
-        layout_ccd.addWidget(btn_gestor)
-
-        grid_presets = QGridLayout()
-        btn_p1 = QPushButton("Astigmatismo (3xy)")
-        btn_p1.setObjectName("btn_preset")
-        btn_p1.clicked.connect(lambda: self.input_ecuacion.setText("3*x*y + 2*x"))
-        
-        btn_p2 = QPushButton("Onda (sin(x)+cos(y))")
-        btn_p2.setObjectName("btn_preset")
-        btn_p2.clicked.connect(lambda: self.input_ecuacion.setText("sin(x) + cos(y)"))
-
-        btn_p3 = QPushButton("Desenfoque (x^2+y^2)")
-        btn_p3.setObjectName("btn_preset")
-        btn_p3.clicked.connect(lambda: self.input_ecuacion.setText("x^2 + y^2"))
-
-        btn_p4 = QPushButton("3er Orden Complejo")
-        btn_p4.setObjectName("btn_preset")
-        btn_p4.clicked.connect(lambda: self.input_ecuacion.setText("-y - 1.5*y*y*y + 1.5*x*x*y + x*y*y - 0.33*x*x*x + 2*x*x + 2*y*y + 0.5*x - 1"))
-
-        grid_presets.addWidget(btn_p1, 0, 0)
-        grid_presets.addWidget(btn_p2, 0, 1)
-        grid_presets.addWidget(btn_p3, 1, 0)
-        grid_presets.addWidget(btn_p4, 1, 1)
-        layout_ccd.addLayout(grid_presets)
-
+        self.widget_eq_ccd = EquationInputWidget(ecuacion_inicial="3*x*y + 2*x", incluir_presets=True)
+        layout_ccd.addWidget(self.widget_eq_ccd)
 
         # Dimensiones de la malla
         grid_dim = QGridLayout()
@@ -179,14 +149,37 @@ class ParameterInputPanel(QWidget):
 
         # --- Grupo 3.8: Círculo Unitario Sintético ---
         self.grupo_circulo_sintetico = QGroupBox("2. Círculo Unitario Sintético")
-        layout_sint = QHBoxLayout()
-        layout_sint.addWidget(QLabel("Número de Puntos (N):"))
+        layout_sint = QVBoxLayout()
+
+        grid_pts = QHBoxLayout()
+        grid_pts.addWidget(QLabel("Número de Puntos (N):"))
         self.input_pts_sintetico = QLineEdit("500")
         self.input_pts_sintetico.setToolTip("Cantidad de puntos aleatorios a generar dentro del círculo unitario [-1, 1], ej. 100, 500, 2000, 5000, 10000.")
-        layout_sint.addWidget(self.input_pts_sintetico)
+        grid_pts.addWidget(self.input_pts_sintetico)
+        layout_sint.addLayout(grid_pts)
+
+        self.chk_z_aleatorio = QCheckBox("Superficie Z Aleatoria (Combinación Zernike + Ruido)")
+        self.chk_z_aleatorio.setChecked(True)
+        self.chk_z_aleatorio.setToolTip("Si se activa, genera una superficie óptica sintetizada aleatoriamente variando coeficientes Zernike. Si se desactiva, permite escribir una ecuación Z(x,y) personalizada.")
+        self.chk_z_aleatorio.toggled.connect(self._al_alternar_z_aleatorio)
+        layout_sint.addWidget(self.chk_z_aleatorio)
+
+        # Campo de Ecuación Z(x,y) personalizada para el círculo utilizando el componente modular
+        self.widget_eq_sintetico = EquationInputWidget(ecuacion_inicial="x^2 + y^2", incluir_presets=False)
+        self.widget_eq_sintetico.setEnabled(False)
+        layout_sint.addWidget(self.widget_eq_sintetico)
+
+        self.chk_semilla_aleatoria = QCheckBox("Semilla Aleatoria (Variar puntos (X,Y) en cada ejecución)")
+        self.chk_semilla_aleatoria.setChecked(True)
+        self.chk_semilla_aleatoria.setToolTip("Si se activa, genera una nueva muestra espacial de puntos aleatorios en cada ejecución. Si se desactiva, fija la semilla=42.")
+        layout_sint.addWidget(self.chk_semilla_aleatoria)
+
         self.grupo_circulo_sintetico.setLayout(layout_sint)
         self.grupo_circulo_sintetico.setVisible(False)
         layout.addWidget(self.grupo_circulo_sintetico)
+
+
+
 
 
 
@@ -221,6 +214,13 @@ class ParameterInputPanel(QWidget):
         self.input_csv_path.textChanged.connect(self._validar_inputs)
         self.input_img_path.textChanged.connect(self._validar_inputs)
         self.input_pts_sintetico.textChanged.connect(self._validar_inputs)
+        self.input_ecuacion_sintetico.textChanged.connect(self._validar_inputs)
+
+    def _al_alternar_z_aleatorio(self, checked: bool):
+        """Habilita o deshabilita la ecuación Z personalizada según si la superficie aleatoria está activa."""
+        self.widget_eq_sintetico.setEnabled(not checked)
+        self._validar_inputs()
+
 
     def _validar_inputs(self):
         """Comprueba la validez de los parámetros y aplica resaltado en rojo para errores."""
@@ -288,6 +288,7 @@ class ParameterInputPanel(QWidget):
             self.input_csv_path.setStyleSheet(_STYLE_OK)
             self.input_img_path.setStyleSheet(_STYLE_OK)
             self.input_pts_sintetico.setStyleSheet(_STYLE_OK)
+            self.input_ecuacion_sintetico.setStyleSheet(_STYLE_OK)
 
         elif modo == 1:  # CSV Experimental
             filepath = self.input_csv_path.text().strip()
@@ -303,6 +304,7 @@ class ParameterInputPanel(QWidget):
             self.input_diametro.setStyleSheet(_STYLE_OK)
             self.input_img_path.setStyleSheet(_STYLE_OK)
             self.input_pts_sintetico.setStyleSheet(_STYLE_OK)
+            self.input_ecuacion_sintetico.setStyleSheet(_STYLE_OK)
 
         elif modo == 3:  # Imagen de Interferograma
             filepath = self.input_img_path.text().strip()
@@ -319,6 +321,7 @@ class ParameterInputPanel(QWidget):
             self.input_diametro.setStyleSheet(_STYLE_OK)
             self.input_csv_path.setStyleSheet(_STYLE_OK)
             self.input_pts_sintetico.setStyleSheet(_STYLE_OK)
+            self.input_ecuacion_sintetico.setStyleSheet(_STYLE_OK)
 
         else:  # Circulo Sintetico
             try:
@@ -330,6 +333,16 @@ class ParameterInputPanel(QWidget):
                 self.input_pts_sintetico.setStyleSheet(_STYLE_ERROR)
                 todo_valido = False
 
+            if not self.chk_z_aleatorio.isChecked():
+                eq = self.input_ecuacion_sintetico.text().strip()
+                if not eq:
+                    self.input_ecuacion_sintetico.setStyleSheet(_STYLE_ERROR)
+                    todo_valido = False
+                else:
+                    self.input_ecuacion_sintetico.setStyleSheet(_STYLE_OK)
+            else:
+                self.input_ecuacion_sintetico.setStyleSheet(_STYLE_OK)
+
             self.input_ecuacion.setStyleSheet(_STYLE_OK)
             self.input_N.setStyleSheet(_STYLE_OK)
             self.input_M.setStyleSheet(_STYLE_OK)
@@ -338,6 +351,7 @@ class ParameterInputPanel(QWidget):
             self.input_img_path.setStyleSheet(_STYLE_OK)
 
         self.btn_ejecutar.setEnabled(todo_valido)
+
 
     def _cambio_modo_entrada(self, index):
         """Muestra u oculta los paneles segun el modo de entrada activo."""
@@ -397,7 +411,10 @@ class ParameterInputPanel(QWidget):
         self.chk_exp_csv.setChecked(False)
         self.chk_exp_zemax.setChecked(False)
         self.chk_exp_codev.setChecked(False)
+        self.chk_z_aleatorio.setChecked(True)
+        self.chk_semilla_aleatoria.setChecked(True)
         self._validar_inputs()
+
 
     def _abrir_gestor_presets(self):
         """Abre el cuadro de dialogo interactivo del Gestor de Presets e Historial."""

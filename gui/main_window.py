@@ -332,11 +332,18 @@ class ZernikeZemaxMainWindow(QMainWindow):
 
         
         if modo == 2:
+            chk_surf = getattr(self.panel_parametros, 'chk_z_aleatorio', None)
+            if chk_surf is None or chk_surf.isChecked():
+                eq_str = ""
+            else:
+                eq_str = self.panel_parametros.input_ecuacion_sintetico.text().strip()
             try:
                 N = int(self.panel_parametros.input_pts_sintetico.text())
                 M = N
             except ValueError:
                 N, M = 500, 500
+
+
         else:
             try:
                 N = int(self.panel_parametros.input_N.text())
@@ -377,10 +384,17 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(10)
         self.lbl_estado_icon.setText("Calculando...")
-        self.panel_parametros.btn_ejecutar.setEnabled(False)
-        self.status_bar.showMessage(f"Iniciando cálculo con motor ({'Fortran' if motor == 1 else 'Python'})...")
+        chk_semilla = getattr(self.panel_parametros, 'chk_semilla_aleatoria', None)
+        semilla = None if (chk_semilla is None or chk_semilla.isChecked()) else 42
 
-        self.worker = ZernikeWorker(modo, eq_str, N, M, diametro, filepath, motor, datos_directos, self)
+        chk_surf = getattr(self.panel_parametros, 'chk_z_aleatorio', None)
+        superficie_aleatoria = True if (chk_surf is None or chk_surf.isChecked()) else False
+
+        self.worker = ZernikeWorker(
+            modo, eq_str, N, M, diametro, filepath, motor, datos_directos,
+            semilla=semilla, superficie_aleatoria=superficie_aleatoria, parent=self
+        )
+
 
         self.worker.progreso_actualizado.connect(self._al_progreso_worker)
         self.worker.calculo_finalizado.connect(self._al_finalizar_worker)
