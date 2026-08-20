@@ -132,8 +132,9 @@ def mostrar_acerca_de(parent=None, url_portafolio: str = None):
     text_edit.setOpenExternalLinks(True)
     text_edit.setHtml(f"""
         <div style='color: {paleta["body_color"]}; font-family: sans-serif; font-size: 13px; text-align: center; padding: 8px;'>
-            <h2 style='color: {paleta["h2_color"]}; margin-bottom: 6px;'>Zernike v1.1.0</h2>
+            <h2 style='color: {paleta["h2_color"]}; margin-bottom: 6px;'>Zernike v1.2.0</h2>
             <p>Ajuste y caracterización metrológica de superficies ópticas mediante <b>Polinomios Ortogonales de Zernike (ISO 10110-5 / ANSI Z80.28)</b>.</p>
+
             <p style='margin-top: 6px;'>Algoritmo de Gram-Schmidt discreto (Malacara, 1990 — <i>Optical Shop Testing</i>).</p>
             <hr style='border: none; border-top: 1px solid {paleta["hr_color"]}; margin: 12px 0;'>
             <p style='font-size: 13px; font-weight: bold;'>

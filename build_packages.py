@@ -29,7 +29,8 @@ def _obtener_version() -> str:
                     return match.group(1)
     except Exception:
         pass
-    return "1.1.0"
+    return "1.2.0"
+
 
 
 VERSION = _obtener_version()
