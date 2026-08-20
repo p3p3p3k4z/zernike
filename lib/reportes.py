@@ -9,11 +9,18 @@ import io
 import base64
 import datetime
 import numpy as np
+
 import matplotlib
-matplotlib.use('Agg')  # Backend no interactivo para renderizado headless
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning, module=".*mplot3d.*")
+warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*overflow encountered in dot.*")
+
+
 
 from lib.zernike import ResultadoZernike, INFORMACION_ZERNIKE_ISO, polinomios_zernike, evaluar_polinomios
+
 from lib.visualizacion import (
     graficar_pupila,
     mapa_fase_3d,

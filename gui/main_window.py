@@ -438,13 +438,28 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self._actualizar_grafica_sintetico()
 
         self._procesar_exportaciones(resultados, X_in, Y_in, W_in)
-
+        self._actualizar_dialogos_flotantes_abiertos(resultados, X_in, Y_in, W_in)
 
         self.progress_bar.setValue(100)
         self.lbl_estado_icon.setText("Completado")
         self.status_bar.showMessage("Ajuste de Zernike finalizado exitosamente. Vistas actualizadas.")
         self.progress_bar.setVisible(False)
         self.panel_parametros.btn_ejecutar.setEnabled(True)
+
+    def _actualizar_dialogos_flotantes_abiertos(self, resultados, X_in, Y_in, W_in):
+        """Sincroniza y recalcula dinámicamente cualquier ventana flotante abierta cuando se completa una nueva simulación."""
+        # 1. Ventana Modo Zemax OpticStudio
+        if hasattr(self, '_dialog_zemax_view') and self._dialog_zemax_view is not None and self._dialog_zemax_view.isVisible():
+            self._dialog_zemax_view.actualizar_datos(resultados)
+
+        # 2. Ventana Error Residual 3D
+        if hasattr(self, '_dialog_3d') and self._dialog_3d is not None and self._dialog_3d.isVisible():
+            self._dialog_3d.actualizar_datos(X_in, Y_in, W_in, resultados.W_fit)
+
+        # 3. Ventana Error Residual 2D
+        if hasattr(self, '_dialog_2d') and self._dialog_2d is not None and self._dialog_2d.isVisible():
+            self._dialog_2d.actualizar_datos(X_in, Y_in, W_in, resultados.W_fit)
+
 
     def _al_cambiar_camara_3d(self, elev: int, azim: int):
         """Actualiza dinamicamente la inclinacion y orientacion de la camara 3D."""
@@ -811,14 +826,28 @@ class ZernikeZemaxMainWindow(QMainWindow):
         self.status_bar.showMessage("Gráfico 2D de Error Residual con panel de controles desplegado en ventana flotante.")
 
     def _mostrar_vista_modo_zemax(self):
-        """Abre la ventana interactiva flotante identica a Zemax OpticStudio con Quick Fit y matriz de coeficientes."""
+        """Abre la ventana interactiva flotante idéntica a Zemax OpticStudio con Quick Fit y matriz de coeficientes."""
         from gui.zemax_view_dialog import ZemaxViewDialog
-        if hasattr(self, '_dialog_zemax_view') and self._dialog_zemax_view is not None and self._dialog_zemax_view.isVisible():
-            self._dialog_zemax_view.close()
+        if self.ultimo_resultado is None:
+            QMessageBox.warning(
+                self,
+                "Sin Ajuste Calculado",
+                "Primero debes hacer clic en 'EJECUTAR AJUSTE DE ZERNIKE' para desplegar la vista Zemax."
+            )
+            return
 
-        self._dialog_zemax_view = ZemaxViewDialog(resultado_zernike=self.ultimo_resultado, parent=self)
-        self._dialog_zemax_view.show()
+        if hasattr(self, '_dialog_zemax_view') and self._dialog_zemax_view is not None and self._dialog_zemax_view.isVisible():
+            self._dialog_zemax_view.actualizar_datos(self.ultimo_resultado)
+            self._dialog_zemax_view.raise_()
+            self._dialog_zemax_view.activateWindow()
+        else:
+            self._dialog_zemax_view = ZemaxViewDialog(resultado_zernike=self.ultimo_resultado, parent=self)
+            self._dialog_zemax_view.show()
+            self._dialog_zemax_view.raise_()
+            self._dialog_zemax_view.activateWindow()
+
         self.status_bar.showMessage("Vista Estilo Zemax OpticStudio (Quick Fit & Coeficientes) desplegada.")
+
 
     def _mostrar_visor_polinomios_2d(self):
         """Abre el visor 2D interactivo para explorar de forma individual los 21 Polinomios de Zernike."""

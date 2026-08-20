@@ -75,3 +75,36 @@ def test_zemax_view_dialog_poblado_y_edicion(qapp):
     assert dialog.txt_rms.text() == "0.000"
 
     dialog.close()
+
+
+def test_todos_los_coeficientes_coinciden_exactamente_con_matriz_zemax(qapp):
+    """
+    Verifica que los 21 coeficientes Zernike coincidan 1:1 entre el ResultadoZernike
+    y los spins de la matriz de ZemaxViewDialog redondeados a 4 decimales.
+    """
+    np.random.seed(42)
+    A_aleatorios = np.random.uniform(-5.0, 5.0, 21)
+
+    res_mock = ResultadoZernike(
+        U=np.array([]), V=[], D=np.array([]), F=None,
+        B=np.array([]), C=np.array([]),
+        A=A_aleatorios, W_fit=np.array([]), X=np.array([0]), Y=np.array([0]), W=np.array([1.0])
+    )
+
+    dialog = ZemaxViewDialog(resultado_zernike=res_mock, parent=None)
+
+    # Verificar los 4 términos de la barra superior
+    assert dialog.txt_piston.value() == pytest.approx(round(A_aleatorios[0], 4), abs=1e-4)
+    assert dialog.txt_xtilt.value() == pytest.approx(round(A_aleatorios[1], 4), abs=1e-4)
+    assert dialog.txt_ytilt.value() == pytest.approx(round(A_aleatorios[2], 4), abs=1e-4)
+    assert dialog.txt_focus.value() == pytest.approx(round(A_aleatorios[4], 4), abs=1e-4)
+
+    # Verificar los 17 términos de la matriz cuadrícula
+    for r_idx, spin in dialog.dict_spins_matriz.items():
+        val_spin = spin.value()
+        val_esperado = round(A_aleatorios[r_idx - 1], 4)
+        assert val_spin == pytest.approx(val_esperado, abs=1e-4), f"Desfase en coeficiente Zernike A_{r_idx}"
+
+    dialog.close()
+
+

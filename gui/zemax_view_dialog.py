@@ -43,6 +43,13 @@ class ZemaxViewDialog(QDialog):
         else:
             self._recalcular_quick_fit()
 
+    def actualizar_datos(self, resultado_zernike):
+        """Actualiza dinámicamente la vista de Zemax con un nuevo resultado de ajuste de Zernike."""
+        self.resultado = resultado_zernike
+        if self.resultado is not None:
+            self._poblar_datos_desde_resultado(self.resultado)
+
+
     def _construir_ui(self):
         layout_principal = QHBoxLayout(self)
         layout_principal.setContentsMargins(10, 10, 10, 10)
@@ -179,25 +186,25 @@ class ZemaxViewDialog(QDialog):
             self.grid_matrix.addWidget(lbl_r, row_idx, 6)
 
         self.mapeo_celda_zernike = {
-            (1, 1): 13,
-            (1, 2): 9,
-            (1, 3): 8,
-            (1, 4): 4,
-            (1, 5): 6,
-            (2, 1): 19,
-            (2, 2): 18,
-            (2, 3): 17,
-            (2, 4): 12,
-            (2, 5): 14,
-            (2, 6): 10,
-            (2, 7): 7,
-            (3, 8): 11,
-            (3, 9): 15,
-            (4, 10): 16,
-            (4, 11): 20,
-            (5, 12): 17,
-            (5, 13): 21,
+            (1, 1): 13,  # Spherical 3rd (A_13)
+            (1, 2): 9,   # Y Coma 3rd (A_9)
+            (1, 3): 8,   # X Coma 3rd (A_8)
+            (1, 4): 4,   # 45° Astig 3rd (A_4)
+            (1, 5): 6,   # 0° Astig 3rd (A_6)
+            (2, 2): 19,  # Y Coma 5th (A_19)
+            (2, 3): 18,  # X Coma 5th (A_18)
+            (2, 4): 12,  # 45° Astig 5th (A_12)
+            (2, 5): 14,  # 0° Astig 5th (A_14)
+            (2, 6): 10,  # 0° Tri 5th (A_10)
+            (2, 7): 7,   # 30° Tri 5th (A_7)
+            (3, 6): 20,  # 0° Tri 7th (A_20)
+            (3, 7): 17,  # 30° Tri 7th (A_17)
+            (3, 8): 11,  # 22.5° Quad 7th (A_11)
+            (3, 9): 15,  # 0° Quad 7th (A_15)
+            (4, 10): 16, # 18° Penta 9th (A_16)
+            (4, 11): 21, # 0° Penta 9th (A_21)
         }
+
 
         self.dict_spins_matriz = {}
 

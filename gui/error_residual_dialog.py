@@ -33,14 +33,21 @@ class ErrorResidual3DDialog(Base3DPlotDialog):
         if modo_2d:
             self.control_bar.btn_modo_vista.setChecked(True)
 
-        # El primer dibujo se difiere a showEvent para garantizar que
-        # el canvas tenga sus dimensiones reales antes de renderizar.
+    def actualizar_datos(self, X, Y, W_exp, W_fit):
+        """Actualiza dinámicamente los datos de entrada del error residual y refresca la gráfica 2D/3D."""
+        self.X = X
+        self.Y = Y
+        self.W_exp = W_exp
+        self.W_fit = W_fit
+        self.Z_diff = W_exp - W_fit
+        self._actualizar_grafico_3d()
 
     def showEvent(self, event):
         """Renderiza el grafico 3D una vez que la ventana es visible y dimensionada."""
         super().showEvent(event)
         from PySide6.QtCore import QTimer
         QTimer.singleShot(50, self._actualizar_grafico_3d)
+
 
 
     def _actualizar_grafico_3d(self):

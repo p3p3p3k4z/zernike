@@ -14,8 +14,15 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib.patches as mpatches
 from matplotlib.figure import Figure
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning, module=".*mplot3d.*")
+warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*overflow encountered in dot.*")
+
+
 
 _VARS = ['U', 'V', 'D', 'B', 'C', 'A']
+
+
 
 _COL = {
     'U': '#FF4757',
